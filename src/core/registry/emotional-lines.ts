@@ -1,5 +1,5 @@
 import { h, type VNode } from "../vnode";
-import { boxCenter, edgePoint, offsetParallel, zigzagPath, type Box, type Point } from "../geom";
+import { boxCenter, edgePoint, offsetParallel, zigzagPath, wavePath, type Box, type Point } from "../geom";
 import { emotionalLines, type EmotionalLineStyle } from "../registry";
 
 function endpoints(from: Box, to: Box): [Point, Point] {
@@ -56,23 +56,72 @@ const cutoff: EmotionalLineStyle = {
   },
 };
 
+/** Two chevron legs anchored at `b`, pointing back along the a→b direction. */
+function arrowLegs(a: Point, b: Point, attrs: Record<string, string | number>): VNode[] {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const leg = (sign: number): Point => {
+    const cos = Math.cos(0.45);
+    const sin = Math.sin(0.45) * sign;
+    return { x: b.x + 12 * (-ux * cos - -uy * sin), y: b.y + 12 * (-ux * sin + -uy * cos) };
+  };
+  return [seg(b, leg(1), attrs), seg(b, leg(-1), attrs)];
+}
+
 /** Directional: between[0] is the caretaker, the arrow points at the person cared for. */
 const caretaker: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const ux = dx / len;
-    const uy = dy / len;
-    const leg = (sign: number): Point => {
-      const cos = Math.cos(0.45);
-      const sin = Math.sin(0.45) * sign;
-      return { x: b.x + 12 * (-ux * cos - -uy * sin), y: b.y + 12 * (-ux * sin + -uy * cos) };
-    };
-    return [seg(a, b, BLUE), seg(b, leg(1), BLUE), seg(b, leg(-1), BLUE)];
+    return [seg(a, b, BLUE), ...arrowLegs(a, b, BLUE)];
   },
 };
+
+const PINK = { stroke: "#d6336c" };
+const PURPLE = { stroke: "#6f42c1" };
+const DARKRED = { stroke: "#8b1a1a" };
+const OCHRE = { stroke: "#b8860b" };
+
+/** Smooth wave — the calm counterpart to conflict's zigzag. */
+const harmony: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    return [h("path", { d: wavePath(a, b), fill: "none", "stroke-width": 1.5, ...GREEN })];
+  },
+};
+
+/** Directional: between[0] is fixated ON between[1] — solid dot pinned at the target. */
+const fixation: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    return [seg(a, b, PURPLE), h("circle", { cx: b.x, cy: b.y, r: 4, fill: PURPLE.stroke, stroke: "none" })];
+  },
+};
+
+/** Line with a heart at the midpoint. */
+const love: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    return [
+      seg(a, b, PINK),
+      h("text", { x: mid.x, y: mid.y + 4, "text-anchor": "middle", "font-size": 12, fill: PINK.stroke, stroke: "white", "stroke-width": 3, "paint-order": "stroke" }, ["♥"]),
+    ];
+  },
+};
+
+/** Directional: between[0] abuses between[1] — zigzag with an arrowhead at the victim. */
+const abuse: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    return [h("path", { d: zigzagPath(a, b), fill: "none", "stroke-width": 1.5, ...DARKRED }), ...arrowLegs(a, b, DARKRED)];
+  },
+};
+
+const distrust: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { ...OCHRE, "stroke-dasharray": "8 4" }) };
+const indifferent: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { stroke: "#aaa", "stroke-dasharray": "2 8" }) };
 
 emotionalLines.register("close", close);
 emotionalLines.register("caretaker", caretaker);
@@ -81,3 +130,9 @@ emotionalLines.register("conflict", conflict);
 emotionalLines.register("fused-conflict", fusedConflict);
 emotionalLines.register("cutoff", cutoff);
 emotionalLines.register("distant", distant);
+emotionalLines.register("harmony", harmony);
+emotionalLines.register("love", love);
+emotionalLines.register("fixation", fixation);
+emotionalLines.register("abuse", abuse);
+emotionalLines.register("distrust", distrust);
+emotionalLines.register("indifferent", indifferent);

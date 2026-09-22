@@ -69,4 +69,24 @@ export function zigzagPath(a: Point, b: Point, amp = 6, wavelen = 14): string {
   return d + ` L ${b.x} ${b.y}`;
 }
 
+/** Smooth sine-like wave from a to b (quadratic segments) — the gentle cousin of zigzagPath. */
+export function wavePath(a: Point, b: Point, amp = 5, wavelen = 18): string {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const n = Math.max(2, Math.round(len / wavelen));
+  const ux = dx / len;
+  const uy = dy / len;
+  const nx = -uy;
+  const ny = ux;
+  let d = `M ${a.x} ${a.y}`;
+  for (let i = 1; i <= n; i++) {
+    const tc = (len * (i - 0.5)) / n;
+    const te = (len * i) / n;
+    const s = i % 2 === 1 ? amp : -amp;
+    d += ` Q ${round(a.x + ux * tc + nx * s)} ${round(a.y + uy * tc + ny * s)} ${round(a.x + ux * te)} ${round(a.y + uy * te)}`;
+  }
+  return d;
+}
+
 const round = (n: number) => Math.round(n * 100) / 100;

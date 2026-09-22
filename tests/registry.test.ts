@@ -85,8 +85,25 @@ describe("line styles", () => {
     expect(unionLines.get("separated")!.renderAdornment!({ x: 80, y: 50 })).toHaveLength(1);
     expect(unionLines.get("divorced")!.renderAdornment!({ x: 80, y: 50 })).toHaveLength(2);
   });
-  it("registers the seven emotional kinds", () => {
-    expect(emotionalLines.names().sort()).toEqual(["caretaker", "close", "conflict", "cutoff", "distant", "fused", "fused-conflict"]);
+  it("registers the full emotional kind set", () => {
+    expect(emotionalLines.names().sort()).toEqual([
+      "abuse", "caretaker", "close", "conflict", "cutoff", "distant", "distrust",
+      "fixation", "fused", "fused-conflict", "harmony", "indifferent", "love",
+    ]);
+  });
+  it("harmony is a smooth curve (Q segments), not a zigzag", () => {
+    const [wave] = emotionalLines.get("harmony")!.render(boxA, boxB);
+    expect(String(wave.attrs.d)).toContain("Q ");
+  });
+  it("fixation pins a dot at the target; abuse arrows the zigzag at the victim", () => {
+    const fix = emotionalLines.get("fixation")!.render(boxA, boxB);
+    expect(fix.some((v) => v.tag === "circle")).toBe(true);
+    const ab = emotionalLines.get("abuse")!.render(boxA, boxB);
+    expect(ab[0].tag).toBe("path");
+    expect(ab).toHaveLength(3); // zigzag + two arrow legs
+  });
+  it("love halos a heart at the midpoint", () => {
+    expect(JSON.stringify(emotionalLines.get("love")!.render(boxA, boxB))).toContain("♥");
   });
   it("caretaker draws a line plus a 2-leg arrowhead at the recipient end", () => {
     const vs = emotionalLines.get("caretaker")!.render(boxA, boxB);
