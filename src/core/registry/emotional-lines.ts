@@ -130,6 +130,136 @@ const distrust: EmotionalLineStyle = {
 };
 const indifferent: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { stroke: "#aaa", "stroke-dasharray": "2 8" }) };
 
+// ── GenoPro-sheet additions ──────────────────────────────────────────────
+
+const midOf = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+const plain: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { stroke: "#666", "stroke-width": 1 }) };
+const hostile: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    return [h("path", { d: zigzagPath(a, b, 7, 10), fill: "none", "stroke-width": 2, ...RED })];
+  },
+};
+const violence: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    return [h("path", { d: zigzagPath(a, b, 7, 8), fill: "none", "stroke-width": 2.5, ...DARKRED })];
+  },
+};
+const hate: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-2, 2], { ...RED, "stroke-dasharray": "4 3" }) };
+
+/** Directional: between[0] is jealous OF between[1] — diamond at midpoint, arrow at target. */
+const jealous: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const m = midOf(a, b);
+    return [
+      seg(a, b, RED),
+      h("path", { d: `M ${m.x} ${m.y - 7} L ${m.x + 7} ${m.y} L ${m.x} ${m.y + 7} L ${m.x - 7} ${m.y} Z`, fill: "white", ...RED, "stroke-width": 1.5 }),
+      ...arrowLegs(a, b, RED),
+    ];
+  },
+};
+
+const neverMet: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const m = midOf(a, b);
+    const r = 6;
+    const ink = { stroke: "#888", "stroke-width": 1.5 };
+    return [
+      seg(a, b, { ...GRAY, "stroke-dasharray": "6 5" }),
+      h("rect", { x: m.x - r, y: m.y - r, width: 2 * r, height: 2 * r, fill: "white", ...ink }),
+      seg({ x: m.x - r, y: m.y - r }, { x: m.x + r, y: m.y + r }, ink),
+      seg({ x: m.x - r, y: m.y + r }, { x: m.x + r, y: m.y - r }, ink),
+    ];
+  },
+};
+
+/** Cutoff bars healed over: dashed green line, bars, and a ring around them. */
+const cutoffRepaired: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const m = midOf(a, b);
+    const base = cutoff.render(f, t).map((v) => ({ ...v, attrs: { ...v.attrs, stroke: GREEN.stroke } }));
+    return [...base, h("circle", { cx: m.x, cy: m.y, r: 10, fill: "none", ...GREEN, "stroke-width": 1.5 })];
+  },
+};
+
+/** Ladder: two rails with rungs (GenoPro "best friends / very close"). */
+const bestFriends: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const rails = parallelLines(f, t, [-3, 3], GREEN);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const nx = -uy;
+    const ny = ux;
+    const rungs: VNode[] = [];
+    for (let d = 10; d < len - 6; d += 12) {
+      const c = { x: a.x + ux * d, y: a.y + uy * d };
+      rungs.push(seg({ x: c.x + nx * 3, y: c.y + ny * 3 }, { x: c.x - nx * 3, y: c.y - ny * 3 }, GREEN));
+    }
+    return [...rails, ...rungs];
+  },
+};
+
+/** Two interlocked rings at the midpoint. */
+const inLove: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const m = midOf(a, b);
+    return [
+      seg(a, b, PINK),
+      h("circle", { cx: m.x - 4, cy: m.y, r: 6, fill: "none", ...PINK, "stroke-width": 1.5 }),
+      h("circle", { cx: m.x + 4, cy: m.y, r: 6, fill: "none", ...PINK, "stroke-width": 1.5 }),
+    ];
+  },
+};
+
+/** Directional: between[0] neglects between[1]. */
+const neglect: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    return [seg(a, b, { ...BLUE, "stroke-dasharray": "5 5" }), ...arrowLegs(a, b, BLUE)];
+  },
+};
+
+/** Directional: between[0] controls between[1] — boxed ✗ at midpoint. */
+const controlling: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const m = midOf(a, b);
+    const r = 6;
+    return [
+      seg(a, b, RED),
+      h("rect", { x: m.x - r, y: m.y - r, width: 2 * r, height: 2 * r, fill: "white", ...RED, "stroke-width": 1.5 }),
+      seg({ x: m.x - r, y: m.y - r }, { x: m.x + r, y: m.y + r }, RED),
+      seg({ x: m.x - r, y: m.y + r }, { x: m.x + r, y: m.y - r }, RED),
+      ...arrowLegs(a, b, RED),
+    ];
+  },
+};
+
+/** Directional: between[0] manipulates between[1] — bare ✗ at midpoint. */
+const manipulative: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const m = midOf(a, b);
+    const r = 6;
+    return [
+      seg(a, b, RED),
+      seg({ x: m.x - r, y: m.y - r }, { x: m.x + r, y: m.y + r }, { ...RED, "stroke-width": 2 }),
+      seg({ x: m.x - r, y: m.y + r }, { x: m.x + r, y: m.y - r }, { ...RED, "stroke-width": 2 }),
+      ...arrowLegs(a, b, RED),
+    ];
+  },
+};
+
 emotionalLines.register("close", close);
 emotionalLines.register("caretaker", caretaker);
 emotionalLines.register("fused", fused);
@@ -143,3 +273,15 @@ emotionalLines.register("fixation", fixation);
 emotionalLines.register("abuse", abuse);
 emotionalLines.register("distrust", distrust);
 emotionalLines.register("indifferent", indifferent);
+emotionalLines.register("plain", plain);
+emotionalLines.register("hostile", hostile);
+emotionalLines.register("violence", violence);
+emotionalLines.register("hate", hate);
+emotionalLines.register("jealous", jealous);
+emotionalLines.register("never-met", neverMet);
+emotionalLines.register("cutoff-repaired", cutoffRepaired);
+emotionalLines.register("best-friends", bestFriends);
+emotionalLines.register("in-love", inLove);
+emotionalLines.register("neglect", neglect);
+emotionalLines.register("controlling", controlling);
+emotionalLines.register("manipulative", manipulative);

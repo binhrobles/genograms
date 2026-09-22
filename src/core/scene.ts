@@ -1,7 +1,7 @@
 import type { Diagnostic, GenoDocument, Person } from "./model";
 import { h, type VNode } from "./vnode";
 import { unionBoxes, expandBox, edgePoint, boxCenter, type Box, type Point } from "./geom";
-import { personShapes, decorations, unionLines, emotionalLines } from "./registry";
+import { personShapes, decorations, unionLines, emotionalLines, childLinks } from "./registry";
 
 export const PERSON_SIZE = 40;
 export const BUS_DROP = 30;
@@ -203,7 +203,17 @@ export function buildScene(doc: GenoDocument, opts: SceneOptions = {}): SceneGra
   }
 
   const CHILD_STROKE = { fill: "none", stroke: "black", "stroke-width": 1.2 } as const;
-  const polyline = (pts: Point[]): VNode => h("polyline", { points: pts.map((q) => `${q.x},${q.y}`).join(" "), ...CHILD_STROKE });
+  const polyline = (pts: Point[], extra: Record<string, string | number> = {}): VNode =>
+    h("polyline", { points: pts.map((q) => `${q.x},${q.y}`).join(" "), ...CHILD_STROKE, ...extra });
+  const linkAttrs = (p: Person): Record<string, string | number> => {
+    if (!p.relation) return {};
+    const style = childLinks.get(p.relation);
+    if (!style) {
+      warn(`unknown relation \`${p.relation}\` on \`${p.id}\``);
+      return {};
+    }
+    return style.dash ? { "stroke-dasharray": style.dash } : {};
+  };
   const pathElement = (id: string, vnodes: VNode[], pts: Point[]): SceneElement => {
     const xs = pts.map((q) => q.x);
     const ys = pts.map((q) => q.y);
@@ -228,24 +238,77 @@ export function buildScene(doc: GenoDocument, opts: SceneOptions = {}): SceneGra
     if (!g && !par) continue; // unresolved ref: validator already errored
     const stem: Point = g ? { x: g.midX, y: g.busY } : { x: par!.x, y: par!.y + s / 2 };
 
+    // twin groups (same `twin` key under the same parents) drop from a shared apex
+    const twinGroups = new Map<string, Person[]>();
+    const singles: Person[] = [];
+    for (const k of kids) {
+      if (k.twin) twinGroups.set(k.twin, [...(twinGroups.get(k.twin) ?? []), k]);
+      else singles.push(k);
+    }
+    for (const [key, members] of [...twinGroups]) {
+      if (members.length < 2) {
+        singles.push(...members);
+        twinGroups.delete(key);
+      }
+    }
+
+    /** Legs from a shared apex to each twin, plus the identical-twin bar. */
+    const twinVNodes = (members: Person[], apex: Point): { vnodes: VNode[]; pts: Point[] } => {
+      const tips = members.map((m) => ({ p: m, x: personPos(doc, m.id).x, top: topOf(m) }));
+      tips.sort((a, b) => a.x - b.x);
+      const vnodes = tips.map((t) => polyline([apex, { x: t.x, y: t.top }], linkAttrs(t.p)));
+      if (members.every((m) => m.identical)) {
+        const mids = tips.map((t) => ({ x: (apex.x + t.x) / 2, y: (apex.y + t.top) / 2 }));
+        vnodes.push(polyline([mids[0], mids[mids.length - 1]]));
+      }
+      return { vnodes, pts: [apex, ...tips.map((t) => ({ x: t.x, y: t.top }))] };
+    };
+
     if (kids.length >= 3) {
-      const kidInfo = kids.map((k) => ({ x: personPos(doc, k.id).x, top: topOf(k) }));
-      const sibY = Math.min(...kidInfo.map((q) => q.top)) - 30;
-      const minX = Math.min(...kidInfo.map((q) => q.x), stem.x);
-      const maxX = Math.max(...kidInfo.map((q) => q.x), stem.x);
-      const vnodes = [
+      const allTops = kids.map((k) => topOf(k));
+      const sibY = Math.min(...allTops) - 30;
+      const attach = [
+        ...singles.map((k) => personPos(doc, k.id).x),
+        ...[...twinGroups.values()].map((ms) => ms.reduce((sum, m) => sum + personPos(doc, m.id).x, 0) / ms.length),
+        stem.x,
+      ];
+      const minX = Math.min(...attach);
+      const maxX = Math.max(...attach);
+      const vnodes: VNode[] = [
         polyline([stem, { x: stem.x, y: sibY }]),
         polyline([
           { x: minX, y: sibY },
           { x: maxX, y: sibY },
         ]),
-        ...kidInfo.map((q) => polyline([{ x: q.x, y: sibY }, { x: q.x, y: q.top }])),
       ];
-      lines.push(pathElement(`childlink-${ref}`, vnodes, [stem, { x: minX, y: sibY }, { x: maxX, y: sibY }, ...kidInfo.map((q) => ({ x: q.x, y: q.top }))]));
+      const pts: Point[] = [stem, { x: minX, y: sibY }, { x: maxX, y: sibY }];
+      for (const k of singles) {
+        const x = personPos(doc, k.id).x;
+        const top = topOf(k);
+        vnodes.push(polyline([{ x, y: sibY }, { x, y: top }], linkAttrs(k)));
+        pts.push({ x, y: top });
+      }
+      for (const members of twinGroups.values()) {
+        const meanX = members.reduce((sum, m) => sum + personPos(doc, m.id).x, 0) / members.length;
+        const tw = twinVNodes(members, { x: meanX, y: sibY });
+        vnodes.push(...tw.vnodes);
+        pts.push(...tw.pts);
+      }
+      lines.push(pathElement(`childlink-${ref}`, vnodes, pts));
       continue;
     }
 
-    for (const p of kids) {
+    // fewer than 3 children: a lone twin pair hangs V-style straight off the stem
+    if (twinGroups.size === 1 && singles.length === 0) {
+      const members = [...twinGroups.values()][0];
+      const apexY = Math.min(...members.map((m) => topOf(m))) - 26;
+      const apex = { x: stem.x, y: apexY };
+      const tw = twinVNodes(members, apex);
+      lines.push(pathElement(`childlink-${ref}`, [polyline([stem, apex]), ...tw.vnodes], [stem, ...tw.pts]));
+      continue;
+    }
+
+    for (const p of singles) {
       const child = personPos(doc, p.id);
       const childTop = topOf(p);
       let path: Point[];
@@ -258,7 +321,7 @@ export function buildScene(doc: GenoDocument, opts: SceneOptions = {}): SceneGra
         const my = (stem.y + childTop) / 2;
         path = [stem, { x: stem.x, y: my }, { x: child.x, y: my }, { x: child.x, y: childTop }];
       }
-      lines.push(pathElement(`childlink-${p.id}`, [polyline(path)], path));
+      lines.push(pathElement(`childlink-${p.id}`, [polyline(path, linkAttrs(p))], path));
     }
   }
 

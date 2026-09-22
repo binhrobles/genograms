@@ -46,7 +46,13 @@ export interface EmotionalLineStyle {
   render(from: Box, to: Box): VNode[];
 }
 
+/** Child-link line style, keyed by the child's `relation` field (biological default). */
+export interface ChildLinkStyle {
+  dash?: string;
+}
+
 export const personShapes = new Registry<PersonShape>();
 export const decorations = new Registry<Decoration>();
 export const unionLines = new Registry<UnionLineStyle>();
 export const emotionalLines = new Registry<EmotionalLineStyle>();
+export const childLinks = new Registry<ChildLinkStyle>();

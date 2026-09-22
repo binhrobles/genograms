@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app } from "./state.svelte";
-  import { personShapes, decorations, unionLines, emotionalLines } from "../core/registry";
+  import { personShapes, decorations, unionLines, emotionalLines, childLinks } from "../core/registry";
   import { vnodeToString } from "../export/svg";
   import { dispatchEdits, editorText } from "./editor";
   import { appendToArray, setField } from "../core/surgeon";
@@ -124,6 +124,19 @@
         snippet: `kind = "${n}"`,
         canApply: selectedEl?.kind === "emotional",
         apply: () => dispatchEdits(setField(editorText(), app.map!, selectedEl!.id, "kind", n)),
+      })),
+    },
+    {
+      title: "Child links",
+      entries: childLinks.names().map((n) => ({
+        name: n,
+        swatch: svgWrap(
+          [h("line", { x1: 0, y1: -14, x2: 0, y2: 14, stroke: "black", "stroke-width": 1.2, ...(childLinks.get(n)!.dash ? { "stroke-dasharray": childLinks.get(n)!.dash! } : {}) })],
+          "-22 -18 44 36",
+        ),
+        snippet: `relation = "${n}"`,
+        canApply: selectedEl?.kind === "person" && !!app.doc?.people.get(selectedEl.id)?.parents,
+        apply: () => dispatchEdits(setField(editorText(), app.map!, selectedEl!.id, "relation", n)),
       })),
     },
     {

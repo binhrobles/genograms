@@ -63,9 +63,22 @@ const abortion: PersonShape = {
   },
 };
 
+/** Pet: small diamond (GenoPro convention), no question mark. */
+const pet: PersonShape = {
+  render: (s, style) => {
+    const r = s * 0.3;
+    return [h("path", { d: `M 0 ${-r} L ${r} 0 L 0 ${r} L ${-r} 0 Z`, ...attrs(style) })];
+  },
+  bounds: (s) => {
+    const r = s * 0.3;
+    return { x: -r, y: -r, w: 2 * r, h: 2 * r };
+  },
+};
+
 personShapes.register("M", square);
 personShapes.register("F", circle);
 personShapes.register("U", diamond);
+personShapes.register("pet", pet);
 personShapes.register("pregnancy", pregnancy);
 personShapes.register("miscarriage", miscarriage);
 personShapes.register("abortion", abortion);

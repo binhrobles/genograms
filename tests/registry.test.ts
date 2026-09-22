@@ -18,8 +18,8 @@ describe("Registry", () => {
 });
 
 describe("person shapes", () => {
-  it("has M, F, U plus reproductive-event shapes", () => {
-    expect(personShapes.names().sort()).toEqual(["F", "M", "U", "abortion", "miscarriage", "pregnancy"]);
+  it("has M, F, U plus pet and reproductive-event shapes", () => {
+    expect(personShapes.names().sort()).toEqual(["F", "M", "U", "abortion", "miscarriage", "pet", "pregnancy"]);
     // reproductive events render smaller than the person box
     expect(personShapes.get("miscarriage")!.bounds(40).w).toBeLessThan(20);
     for (const n of ["M", "F", "U"]) {
@@ -81,8 +81,13 @@ describe("line styles", () => {
   const boxB: Box = { x: 140, y: 80, w: 40, h: 40 };
   const flat = (v: unknown) => JSON.stringify(v);
 
-  it("registers the six union statuses", () => {
-    expect(unionLines.names().sort()).toEqual(["affair", "cohabiting", "dating", "divorced", "married", "separated"]);
+  it("registers the union statuses", () => {
+    expect(unionLines.names().sort()).toEqual([
+      "affair", "cohabiting", "dating", "divorced", "engagement", "married", "one-night-stand", "separated", "widowed",
+    ]);
+  });
+  it("widowed puts an X at the midpoint", () => {
+    expect(unionLines.get("widowed")!.renderAdornment!({ x: 0, y: 0 })).toHaveLength(2);
   });
   it("married solid, cohabiting dashed, dating dotted", () => {
     expect(flat(unionLines.get("married")!.renderLine(path))).not.toContain("stroke-dasharray");
@@ -95,8 +100,9 @@ describe("line styles", () => {
   });
   it("registers the full emotional kind set", () => {
     expect(emotionalLines.names().sort()).toEqual([
-      "abuse", "caretaker", "close", "conflict", "cutoff", "distant", "distrust",
-      "fixation", "fused", "fused-conflict", "harmony", "indifferent", "love",
+      "abuse", "best-friends", "caretaker", "close", "conflict", "controlling", "cutoff", "cutoff-repaired",
+      "distant", "distrust", "fixation", "fused", "fused-conflict", "harmony", "hate", "hostile", "in-love",
+      "indifferent", "jealous", "love", "manipulative", "neglect", "never-met", "plain", "violence",
     ]);
   });
   it("harmony is a smooth curve (Q segments), not a zigzag", () => {

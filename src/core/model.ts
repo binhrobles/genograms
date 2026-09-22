@@ -10,6 +10,9 @@ export interface Person {
   decorations: string[];
   notes?: string;
   parents?: string; // union id, or person id for single-parent
+  relation?: string; // child-link style: biological (default) | adopted | foster | step
+  twin?: string; // twin-group key; children of the same parents sharing it drop from one apex
+  identical: boolean; // identical-twin bar across the group's legs (set on every member)
   color?: string; // shape stroke + decoration marks + badge border
   fill?: string; // shape interior
   badge?: string; // name badge background

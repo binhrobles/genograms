@@ -8,7 +8,7 @@ import { autocompletion, type CompletionContext, type CompletionResult } from "@
 import { undo, redo } from "@codemirror/commands";
 import { app } from "./state.svelte";
 import type { TextEdit } from "../core/surgeon";
-import { unionLines, emotionalLines, decorations, personShapes } from "../core/registry";
+import { unionLines, emotionalLines, decorations, personShapes, childLinks } from "../core/registry";
 import "../core/registry/builtins";
 
 let view: EditorView | null = null;
@@ -107,13 +107,14 @@ function genogramCompletions(ctx: CompletionContext): CompletionResult | null {
   const line = ctx.state.doc.lineAt(ctx.pos);
   const before = line.text.slice(0, ctx.pos - line.from);
   const mk = (names: string[]) => names.map((label) => ({ label, type: "constant" as const }));
-  let m = before.match(/(status|kind|sex|shape)\s*=\s*"([\w-]*)$/);
+  let m = before.match(/(status|kind|sex|shape|relation)\s*=\s*"([\w-]*)$/);
   if (m) {
     const SEXES = ["M", "F", "U"];
     const opts =
       m[1] === "status" ? unionLines.names()
       : m[1] === "kind" ? emotionalLines.names()
       : m[1] === "sex" ? SEXES
+      : m[1] === "relation" ? childLinks.names()
       : personShapes.names().filter((n) => !SEXES.includes(n));
     return { from: ctx.pos - m[2].length, options: mk(opts) };
   }

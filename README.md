@@ -33,9 +33,12 @@ decorations = ["alcoholism"]        # combinable, extensible; built-ins:
                        # Same-sex unions need no special markup — any two people
                        # can share a union.
 parents = "mom-dad"    # union id, or a person id for single-parent
+relation = "adopted"   # child-link style: biological (default) | adopted | foster | step
+twin = "g1"            # same key on siblings = twins (drop from one apex);
+identical = true       # add on every member for the identical-twin crossbar
 shape = "miscarriage"  # optional shape override: miscarriage (dot) | pregnancy
-                       # (triangle) | abortion (small ✗) — hang off a union via
-                       # `parents` like any child; use `birth` for the date.
+                       # (triangle) | abortion (small ✗) | pet (small diamond) —
+                       # hang off a union via `parents`; use `birth` for the date.
                        # Stillbirth: keep the sex shape + "deceased" decoration.
 color = "#7a5195"      # optional: shape stroke, decoration ink, badge border
 fill = "#f3e8fa"       # optional: shape interior
@@ -43,7 +46,8 @@ badge = "#e9d7f5"      # optional: name badge background
 
 [unions.mom-dad]
 partners = ["mom", "dad"]
-status = "divorced"    # married | divorced | separated | cohabiting | dating | affair
+status = "divorced"    # married | divorced | separated | cohabiting | dating
+                       # | affair | engagement | one-night-stand | widowed (✗ at mid)
 year = 1988
 color = "#7a5195"      # optional: line color
 # The union line connects partners side-to-side (elbowing if they sit at
@@ -55,10 +59,12 @@ color = "#7a5195"      # optional: line color
 [emotional.ada-mom]
 between = ["ada", "mom"]
 kind = "close"         # close | fused | conflict | fused-conflict | cutoff | distant
-                       # | harmony | love | indifferent
+                       # | harmony | love | indifferent | plain | hostile | violence
+                       # | hate | never-met | cutoff-repaired | best-friends | in-love
                        # directional kinds (between[0] acts on between[1]):
                        # | caretaker (arrow) | fixation (dot at target)
                        # | abuse (zigzag + arrow) | distrust (dashed + arrow)
+                       # | jealous | neglect | controlling | manipulative
 color = "#e07b39"      # optional: overrides the kind's default color
 
 [annotations.n1]

@@ -108,6 +108,32 @@ describe("buildScene", () => {
     expect(bare.elements.some((e) => e.kind === "child-link")).toBe(true);
   });
 
+  it("dashes adopted/foster child links via relation", () => {
+    const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]
+[people.c1]\nparents = "u"\nrelation = "adopted"
+[layout]\na = [0,0]\nb = [200,0]\nc1 = [100,150]`;
+    const link = scene(t).elements.find((e) => e.id === "childlink-c1")!;
+    expect(JSON.stringify(link.vnodes)).toContain('"stroke-dasharray":"7 4"');
+  });
+
+  it("twins share an apex; identical twins get the crossbar", () => {
+    const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]
+[people.t1]\nparents = "u"\ntwin = "g"\nidentical = true
+[people.t2]\nparents = "u"\ntwin = "g"\nidentical = true
+[layout]\na = [0,0]\nb = [200,0]\nt1 = [40,150]\nt2 = [160,150]`;
+    const s = scene(t);
+    const links = s.elements.filter((e) => e.kind === "child-link");
+    expect(links).toHaveLength(1);
+    const flat = JSON.stringify(links[0].vnodes);
+    // stem drops to the shared apex at min(top) - 26 = 104
+    expect(flat).toContain('"points":"100,12 100,104"');
+    // both legs radiate from the apex
+    expect(flat).toContain('"points":"100,104 40,130"');
+    expect(flat).toContain('"points":"100,104 160,130"');
+    // identical: crossbar between leg midpoints
+    expect(flat).toContain('"points":"70,117 130,117"');
+  });
+
   it("keeps individual drops for 1–2 children", () => {
     const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]
 [people.c1]\nparents = "u"\n[people.c2]\nparents = "u"
