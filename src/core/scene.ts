@@ -1,6 +1,6 @@
 import type { Diagnostic, GenoDocument, Person } from "./model";
 import { h, type VNode } from "./vnode";
-import { unionBoxes, expandBox, type Box, type Point } from "./geom";
+import { unionBoxes, expandBox, edgePoint, boxCenter, type Box, type Point } from "./geom";
 import { personShapes, decorations, unionLines, emotionalLines } from "./registry";
 
 export const PERSON_SIZE = 40;
@@ -14,6 +14,7 @@ export interface SceneElement {
   selectable: boolean;
   draggable: boolean;
   layoutPos?: [number, number]; // current layout value to write back on drag (attached annotation = offset)
+  hitLine?: [Point, Point]; // when set, hit-test along this segment instead of `bounds` (emotional arcs)
 }
 
 export interface SceneGraph {
@@ -191,6 +192,7 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       selectable: true,
       draggable: false,
       bounds: expandBox(unionBoxes([ba, bb]), 6),
+      hitLine: [edgePoint(ba, boxCenter(bb)), edgePoint(bb, boxCenter(ba))],
       vnodes: style.render(ba, bb),
     });
   }

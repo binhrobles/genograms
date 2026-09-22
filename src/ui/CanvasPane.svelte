@@ -188,7 +188,19 @@
       <g transform={isDragged(el) ? `translate(${delta.x}, ${delta.y})` : undefined}>
         <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         {@html el.vnodes.map(vnodeToString).join("")}
-        {#if el.selectable}
+        {#if el.selectable && el.hitLine}
+          <line
+            class="hit"
+            data-id={el.id}
+            role="button"
+            tabindex="-1"
+            x1={el.hitLine[0].x}
+            y1={el.hitLine[0].y}
+            x2={el.hitLine[1].x}
+            y2={el.hitLine[1].y}
+            onpointerdown={(e) => elPointerDown(e, el)}
+          />
+        {:else if el.selectable}
           <rect
             class="hit"
             data-id={el.id}
@@ -249,6 +261,10 @@
     fill: transparent;
     stroke: none;
     cursor: pointer;
+  }
+  line.hit {
+    stroke: transparent;
+    stroke-width: 12;
   }
   .sel {
     fill: none;
