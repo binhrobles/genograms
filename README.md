@@ -28,7 +28,10 @@ index = true           # double border (the "self" of the genogram)
 decorations = ["alcoholism"]        # combinable, extensible; built-ins:
                        #   alcoholism / substance-abuse (bottom-half fill),
                        #   in-recovery (bottom-half hatch), mental-illness (left half),
-                       #   physical-illness (right half), deceased, index
+                       #   physical-illness (right half), deceased, index,
+                       #   lgbtq (inverted triangle), bisexual (half-filled triangle)
+                       # Same-sex unions need no special markup — any two people
+                       # can share a union.
 parents = "mom-dad"    # union id, or a person id for single-parent
 shape = "miscarriage"  # optional shape override: miscarriage (dot) | pregnancy
                        # (triangle) | abortion (small ✗) — hang off a union via

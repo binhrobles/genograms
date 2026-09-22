@@ -65,7 +65,27 @@ function fillDecoration(name: string, region: Region, hatch = false): Decoration
   };
 }
 
+/** Standard orientation marker: small inverted triangle inside the shape.
+ *  `halfFill` fills the left half (the conventional bisexual variant). */
+function orientationTriangle(halfFilled: boolean): Decoration {
+  return {
+    layer: "over",
+    render: (box, person) => {
+      const r = box.w * 0.28;
+      const top = -r * 0.62;
+      const bot = r * 0.82;
+      const ink = person.color ?? "black";
+      const out: VNode[] = [];
+      if (halfFilled) out.push(h("path", { d: `M ${-r} ${top} L 0 ${top} L 0 ${bot} Z`, fill: ink, stroke: "none" }));
+      out.push(h("path", { d: `M ${-r} ${top} L ${r} ${top} L 0 ${bot} Z`, fill: "none", stroke: ink, "stroke-width": 1.3 }));
+      return out;
+    },
+  };
+}
+
 decorations.register("index", index);
+decorations.register("lgbtq", orientationTriangle(false));
+decorations.register("bisexual", orientationTriangle(true));
 decorations.register("deceased", deceased);
 decorations.register("alcoholism", fillDecoration("alcoholism", "bottom"));
 decorations.register("substance-abuse", fillDecoration("substance-abuse", "bottom"));

@@ -52,6 +52,14 @@ describe("decorations", () => {
     const vs = decorations.get("substance-abuse")!.render(box, person());
     expect(JSON.stringify(vs)).toContain("clipPath");
   });
+  it("lgbtq/bisexual render an inverted triangle inside the shape", () => {
+    const vs = decorations.get("lgbtq")!.render(box, person());
+    expect(vs).toHaveLength(1);
+    expect(vs[0].attrs.fill).toBe("none");
+    const bi = decorations.get("bisexual")!.render(box, person());
+    expect(bi).toHaveLength(2); // half fill + outline
+    expect(bi[0].attrs.fill).toBe("black");
+  });
   it("registers the clinical fill set", () => {
     for (const n of ["alcoholism", "in-recovery", "mental-illness", "physical-illness"]) {
       expect(decorations.get(n), n).toBeDefined();
