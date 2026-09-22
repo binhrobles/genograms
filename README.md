@@ -22,8 +22,8 @@ title = "My Family"
 [people.ada]
 name = "Ada"
 sex = "F"              # "M" square | "F" circle | "U" diamond
-birth = 1990
-death = 2085           # presence adds the deceased ✗
+birth = 1990           # numbers or strings: "~1930", "192?", "c. 1930", "1990-03-02"
+death = 2085           # presence adds the deceased ✗; strings render verbatim
 index = true           # double border (the "self" of the genogram)
 decorations = ["substance-abuse"]   # combinable, extensible
 parents = "mom-dad"    # union id, or a person id for single-parent

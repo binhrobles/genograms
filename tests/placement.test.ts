@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseGenogram } from "../src/core/parse";
-import { placePartner, placeChild, placeSibling, PARTNER_DX, SIBLING_DX, CHILD_DY } from "../src/core/placement";
+import { placePartner, placeChild, placeSibling, approxYear, PARTNER_DX, SIBLING_DX, CHILD_DY } from "../src/core/placement";
 import { unionGeometry } from "../src/core/scene";
 import { FAMILY } from "./fixtures";
 
@@ -34,5 +34,22 @@ describe("placement", () => {
 
   it("places a sibling right of the rightmost sibling", () => {
     expect(placeSibling(doc(), "kai")).toEqual([80 + SIBLING_DX, 140]);
+  });
+
+  it("understands approximate and partial years", () => {
+    expect(approxYear(1930)).toBe(1930);
+    expect(approxYear("~1930")).toBe(1930);
+    expect(approxYear("c. 1930")).toBe(1930);
+    expect(approxYear("192?")).toBe(1925);
+    expect(approxYear("1930-05-12")).toBe(1930);
+    expect(approxYear("unknown")).toBeUndefined();
+    expect(approxYear(undefined)).toBeUndefined();
+  });
+
+  it("slots by approximate birth strings", () => {
+    const d = doc(); // kai b.2021 at x=80
+    d.people.get("kai")!.birth = "~2021";
+    const [x] = placeChild(d, "binh-mai", 2019);
+    expect(x).toBe(80 - SIBLING_DX); // still recognized as later than 2019
   });
 });
