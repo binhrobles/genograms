@@ -1,8 +1,20 @@
 import { parseGenogram, type ParseResult, type SourceMap } from "../core/parse";
-import { buildScene, type SceneGraph } from "../core/scene";
+import { buildScene, type SceneGraph, type SceneOptions } from "../core/scene";
 import type { GenoDocument, Diagnostic } from "../core/model";
 
 export const LS_KEY = "genogram.doc";
+const LS_LAYERS = "genogram.layers";
+
+export type Layers = Required<SceneOptions>;
+const DEFAULT_LAYERS: Layers = { names: true, years: true, decorations: true, emotional: true, annotations: true };
+
+function loadLayers(): Layers {
+  try {
+    return { ...DEFAULT_LAYERS, ...JSON.parse(localStorage.getItem(LS_LAYERS) ?? "{}") };
+  } catch {
+    return { ...DEFAULT_LAYERS };
+  }
+}
 
 export const DEFAULT_DOC = `# Welcome to Genogram — this TOML *is* the document.
 # Edit it directly, or click a person on the canvas for actions.
@@ -104,6 +116,7 @@ class AppState {
   canvasCollapsed = $state(false);
   libraryOpen = $state(false);
   splitPct = $state(42);
+  layers = $state<Layers>(loadLayers());
 
   get doc(): GenoDocument | null {
     return this.result?.doc ?? null;
@@ -117,7 +130,7 @@ class AppState {
     const diags = [...r.diagnostics];
     this.result = r;
     if (r.doc) {
-      const s = buildScene(r.doc);
+      const s = buildScene(r.doc, { ...this.layers });
       diags.push(...s.diagnostics);
       this.scene = s;
       this.stale = false;
@@ -131,6 +144,23 @@ class AppState {
       localStorage.setItem(LS_KEY, text);
     } catch {
       /* private mode etc. */
+    }
+  }
+
+  toggleLayer(name: keyof Layers) {
+    this.layers = { ...this.layers, [name]: !this.layers[name] };
+    try {
+      localStorage.setItem(LS_LAYERS, JSON.stringify(this.layers));
+    } catch {
+      /* ignore */
+    }
+    const doc = this.result?.doc;
+    if (doc) {
+      const s = buildScene(doc, { ...this.layers });
+      this.scene = s;
+      this.diagnostics = [...(this.result?.diagnostics ?? []), ...s.diagnostics];
+      const ids = new Set(s.elements.map((e) => e.id));
+      this.selection = this.selection.filter((id) => ids.has(id));
     }
   }
 }

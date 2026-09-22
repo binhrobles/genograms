@@ -26,6 +26,15 @@ export interface SceneGraph {
   diagnostics: Diagnostic[];
 }
 
+/** View-layer toggles — pure render filters, never part of the document. All default on. */
+export interface SceneOptions {
+  names?: boolean;
+  years?: boolean;
+  decorations?: boolean;
+  emotional?: boolean;
+  annotations?: boolean;
+}
+
 export function personPos(doc: GenoDocument, id: string): Point {
   const [x, y] = doc.layout.get(id) ?? [0, 0];
   return { x, y };
@@ -89,7 +98,8 @@ function effectiveDecorations(p: Person): string[] {
   return names;
 }
 
-export function buildScene(doc: GenoDocument): SceneGraph {
+export function buildScene(doc: GenoDocument, opts: SceneOptions = {}): SceneGraph {
+  const show = { names: true, years: true, decorations: true, emotional: true, annotations: true, ...opts };
   const diagnostics: Diagnostic[] = [];
   const warn = (message: string) => diagnostics.push({ severity: "warning", message, range: [0, 0] });
   const lines: SceneElement[] = [];
@@ -114,7 +124,7 @@ export function buildScene(doc: GenoDocument): SceneGraph {
     const box = shape.bounds(s);
     const under: VNode[] = [];
     const over: VNode[] = [];
-    for (const name of effectiveDecorations(p)) {
+    for (const name of show.decorations ? effectiveDecorations(p) : []) {
       const deco = decorations.get(name);
       if (!deco) {
         warn(`unknown decoration \`${name}\` on \`${p.id}\``);
@@ -124,7 +134,7 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       (deco.layer === "under" ? under : over).push(...deco.render(box, p));
     }
     const texts: VNode[] = [];
-    if (p.name) {
+    if (p.name && show.names) {
       // name badge: rounded pill under the shape, drawn over any lines passing beneath
       const bw = Math.max(26, p.name.length * 6.8 + 14);
       texts.push(
@@ -132,7 +142,7 @@ export function buildScene(doc: GenoDocument): SceneGraph {
         label(0, box.y + box.h + 18.5, p.name),
       );
     }
-    const yrs = yearsLabel(p);
+    const yrs = show.years ? yearsLabel(p) : null;
     if (yrs) texts.push(haloLabel(0, box.y - 8, yrs));
     persons.push({
       id: p.id,
@@ -252,7 +262,7 @@ export function buildScene(doc: GenoDocument): SceneGraph {
     }
   }
 
-  for (const e of doc.emotional.values()) {
+  for (const e of show.emotional ? doc.emotional.values() : []) {
     if (e.between.length !== 2 || !e.between.every((id) => doc.people.has(id))) continue;
     let style = emotionalLines.get(e.kind);
     if (!style) {
@@ -276,7 +286,7 @@ export function buildScene(doc: GenoDocument): SceneGraph {
     });
   }
 
-  for (const a of doc.annotations.values()) {
+  for (const a of show.annotations ? doc.annotations.values() : []) {
     const raw = doc.layout.get(a.id) ?? [0, 0];
     const attached = a.attach != null && doc.people.has(a.attach);
     const base = attached ? personPos(doc, a.attach!) : { x: 0, y: 0 };

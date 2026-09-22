@@ -91,6 +91,23 @@ describe("buildScene", () => {
     expect(JSON.stringify(s.elements.find((e) => e.id === "a")!.vnodes)).toContain('"circle"');
   });
 
+  it("layer options filter years, names, decorations, emotional links, annotations", () => {
+    const doc = parseGenogram(FAMILY).doc!;
+    const all = buildScene(doc);
+    const bare = buildScene(doc, { years: false, names: false, decorations: false, emotional: false, annotations: false });
+    expect(bare.elements.some((e) => e.kind === "emotional")).toBe(false);
+    expect(bare.elements.some((e) => e.kind === "annotation")).toBe(false);
+    const binhAll = JSON.stringify(all.elements.find((e) => e.id === "binh")!.vnodes);
+    const binhBare = JSON.stringify(bare.elements.find((e) => e.id === "binh")!.vnodes);
+    expect(binhAll).toContain("b. 1994");
+    expect(binhBare).not.toContain("b. 1994");
+    expect(binhBare).not.toContain("Binh"); // no name badge
+    expect(binhBare).not.toContain("clipPath"); // no substance-abuse fill
+    // structure survives: shapes, unions, child links all still present
+    expect(bare.elements.some((e) => e.kind === "union")).toBe(true);
+    expect(bare.elements.some((e) => e.kind === "child-link")).toBe(true);
+  });
+
   it("keeps individual drops for 1–2 children", () => {
     const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]
 [people.c1]\nparents = "u"\n[people.c2]\nparents = "u"

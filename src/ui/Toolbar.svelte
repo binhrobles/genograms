@@ -4,6 +4,8 @@
   import { saveTOML, openTOMLFile, exportSVG, exportPNG } from "./files";
 
   let fileInput: HTMLInputElement;
+  let layersOpen = $state(false);
+  const LAYER_LABELS = { names: "names", years: "birth years", decorations: "decorations", emotional: "emotional links", annotations: "notes" } as const;
 
   function newDoc() {
     if (confirm("Replace the current document with the example? (Undo still works.)")) replaceAll(DEFAULT_DOC);
@@ -40,6 +42,24 @@
   <span class="group">
     <button onclick={exportSVG}>export svg</button>
     <button onclick={() => exportPNG()}>export png</button>
+  </span>
+
+  <span class="group layerswrap">
+    <button class:active={layersOpen} onclick={() => (layersOpen = !layersOpen)}>layers</button>
+    {#if layersOpen}
+      <div class="popover">
+        {#each Object.entries(LAYER_LABELS) as [key, text] (key)}
+          <label>
+            <input
+              type="checkbox"
+              checked={app.layers[key as keyof typeof app.layers]}
+              onchange={() => app.toggleLayer(key as keyof typeof app.layers)}
+            />
+            {text}
+          </label>
+        {/each}
+      </div>
+    {/if}
   </span>
 
   <span class="spacer"></span>
@@ -96,5 +116,31 @@
   .errors {
     font-size: 12px;
     color: #b3261e;
+  }
+  .layerswrap {
+    position: relative;
+  }
+  .popover {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    z-index: 20;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .popover label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
   }
 </style>
