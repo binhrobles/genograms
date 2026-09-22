@@ -1,26 +1,40 @@
 <script lang="ts">
   import { app } from "./state.svelte";
   import { dispatchEdits, editorText } from "./editor";
-  import { removeElements } from "../core/surgeon";
-  import { emotionalLines, unionLines } from "../core/registry";
-  import { addPartner, addChild, addSibling, addParent, addNote, toggleDeceased, setIndex, type Ctx } from "./actions";
+  import { removeElements, type TextEdit } from "../core/surgeon";
+  import { emotionalLines, unionLines, decorations } from "../core/registry";
+  import { addPartner, addChild, addSibling, addParent, addNote, toggleDecoration, hasDecoration, type Ctx } from "./actions";
 
   let { pos }: { pos: { left: number; top: number } } = $props();
-  let openMenu = $state<"union" | "emotion" | null>(null);
+  let openMenu = $state<"person" | "union" | "emotion" | "decoration" | null>(null);
 
   const single = $derived(app.selection.length === 1 ? (app.scene?.elements.find((e) => e.id === app.selection[0]) ?? null) : null);
   const singlePerson = $derived(single?.kind === "person" ? single.id : null);
   const singleUnion = $derived(single?.kind === "union" ? single.id : null);
+  const parentsRef = $derived(singlePerson ? app.doc?.people.get(singlePerson)?.parents : undefined);
 
   const ctx = (): Ctx => ({ doc: app.doc!, map: app.map!, text: editorText() });
   const ready = $derived(!!app.doc && !!app.map && !app.stale);
 
-  function withName(label: string, fn: (c: Ctx, id: string, name: string) => { edits: import("../core/surgeon").TextEdit[]; newId: string } | null, id: string) {
+  type NamedAction = (c: Ctx, id: string, name: string) => { edits: TextEdit[]; newId: string } | null;
+  function withName(label: string, fn: NamedAction, id: string) {
+    openMenu = null;
     const name = prompt(label)?.trim();
     if (!name) return;
     const r = fn(ctx(), id, name);
     if (r) dispatchEdits(r.edits, { select: r.newId });
   }
+
+  const personMenu = $derived(
+    singlePerson
+      ? [
+          { label: "parent", prompt: "Parent's name?", fn: addParent, disabled: !!parentsRef && !!app.doc?.unions.has(parentsRef) },
+          { label: "partner", prompt: "Partner's name?", fn: addPartner, disabled: false },
+          { label: "child", prompt: "Child's name?", fn: addChild, disabled: false },
+          { label: "sibling", prompt: "Sibling's name?", fn: addSibling, disabled: !parentsRef },
+        ]
+      : [],
+  );
 
   function del() {
     dispatchEdits(removeElements(editorText(), app.map!, app.doc!, app.selection));
@@ -31,24 +45,32 @@
     openMenu = null;
     if (singlePerson) app.linkPick = { kind, from: singlePerson, union };
   }
+
+  function applyDecoration(name: string) {
+    openMenu = null;
+    if (singlePerson) dispatchEdits(toggleDecoration(ctx(), singlePerson, name));
+  }
+
+  function toggleMenu(which: typeof openMenu) {
+    openMenu = openMenu === which ? null : which;
+  }
 </script>
 
 {#if ready && app.selection.length > 0}
   <div class="bar" style="left: {pos.left}px; top: {pos.top}px">
     {#if singlePerson}
-      {@const parentsRef = app.doc?.people.get(singlePerson)?.parents}
-      <button
-        onclick={() => withName("Parent's name?", addParent, singlePerson)}
-        disabled={!!parentsRef && !!app.doc?.unions.has(parentsRef)}
-        title="adds one parent; again for the second"
-      >
-        + parent
-      </button>
-      <button onclick={() => withName("Partner's name?", addPartner, singlePerson)}>+ partner</button>
-      <button onclick={() => withName("Child's name?", addChild, singlePerson)}>+ child</button>
-      <button onclick={() => withName("Sibling's name?", addSibling, singlePerson)} disabled={!app.doc?.people.get(singlePerson)?.parents} title="needs a parents ref">+ sibling</button>
-      <span class="linkwrap">
-        <button onclick={() => (openMenu = openMenu === "union" ? null : "union")} title="union with an existing person">+ union</button>
+      <span class="menuwrap">
+        <button onclick={() => toggleMenu("person")}>+ person</button>
+        {#if openMenu === "person"}
+          <div class="menu">
+            {#each personMenu as item (item.label)}
+              <button onclick={() => withName(item.prompt, item.fn, singlePerson)} disabled={item.disabled}>{item.label}</button>
+            {/each}
+          </div>
+        {/if}
+      </span>
+      <span class="menuwrap">
+        <button onclick={() => toggleMenu("union")} title="union with an existing person">+ union</button>
         {#if openMenu === "union"}
           <div class="menu">
             {#each unionLines.names() as status (status)}
@@ -57,8 +79,8 @@
           </div>
         {/if}
       </span>
-      <span class="linkwrap">
-        <button onclick={() => (openMenu = openMenu === "emotion" ? null : "emotion")} title="emotional link with an existing person">+ emotion</button>
+      <span class="menuwrap">
+        <button onclick={() => toggleMenu("emotion")} title="emotional link with an existing person">+ emotion</button>
         {#if openMenu === "emotion"}
           <div class="menu">
             {#each emotionalLines.names() as kind (kind)}
@@ -67,8 +89,17 @@
           </div>
         {/if}
       </span>
-      <button onclick={() => dispatchEdits(toggleDeceased(ctx(), singlePerson))}>† deceased</button>
-      <button onclick={() => dispatchEdits(setIndex(ctx(), singlePerson))}>◎ index</button>
+      <span class="menuwrap">
+        <button onclick={() => toggleMenu("decoration")} title="toggle decorations">+ decoration</button>
+        {#if openMenu === "decoration"}
+          <div class="menu">
+            {#each decorations.names() as name (name)}
+              {@const active = hasDecoration(ctx(), singlePerson, name)}
+              <button class:active onclick={() => applyDecoration(name)}>{active ? "✓ " : ""}{name}</button>
+            {/each}
+          </div>
+        {/if}
+      </span>
       <button onclick={() => withName("Note text?", addNote, singlePerson)}>+ note</button>
     {:else if singleUnion}
       <button onclick={() => withName("Child's name?", addChild, singleUnion)}>+ child</button>
@@ -109,7 +140,7 @@
     background: #fdecea;
     color: #b3261e;
   }
-  .linkwrap {
+  .menuwrap {
     position: relative;
   }
   .menu {
@@ -126,5 +157,8 @@
   }
   .menu button {
     text-align: left;
+  }
+  .menu button.active {
+    color: #1a5daa;
   }
 </style>

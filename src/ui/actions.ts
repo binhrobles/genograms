@@ -143,6 +143,27 @@ export function toggleDeceased(ctx: Ctx, personId: string): TextEdit[] {
   return edits;
 }
 
+/** Is this decoration currently active on the person (including the index/death sugar)? */
+export function hasDecoration(ctx: Ctx, personId: string, name: string): boolean {
+  const p = ctx.doc.people.get(personId);
+  if (!p) return false;
+  if (name === "index") return p.index;
+  if (name === "deceased") return p.death != null || p.decorations.includes("deceased");
+  return p.decorations.includes(name);
+}
+
+/** Toggle any decoration, routing through the field sugar where it exists
+ *  (`index = true`, `death` implies deceased). */
+export function toggleDecoration(ctx: Ctx, personId: string, name: string): TextEdit[] {
+  const p = ctx.doc.people.get(personId);
+  if (!p) return [];
+  if (name === "deceased") return toggleDeceased(ctx, personId);
+  if (name === "index") return p.index ? removeField(ctx.text, ctx.map, personId, "index") : setIndex(ctx, personId);
+  if (!p.decorations.includes(name)) return appendToArray(ctx.text, ctx.map, personId, "decorations", name);
+  const rest = p.decorations.filter((d) => d !== name);
+  return rest.length ? setField(ctx.text, ctx.map, personId, "decorations", rest) : removeField(ctx.text, ctx.map, personId, "decorations");
+}
+
 /** Make this person the index person (clearing any other index flags). */
 export function setIndex(ctx: Ctx, personId: string): TextEdit[] {
   const edits: TextEdit[] = [];
