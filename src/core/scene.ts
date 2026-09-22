@@ -5,6 +5,9 @@ import { personShapes, decorations, unionLines, emotionalLines } from "./registr
 
 export const PERSON_SIZE = 40;
 export const BUS_DROP = 30;
+/** Union lines attach slightly below shape center, leaving the center band free for
+ *  emotional links between the same pair. */
+export const UNION_DROP = 12;
 
 export interface SceneElement {
   id: string;
@@ -50,7 +53,7 @@ export function unionGeometry(doc: GenoDocument, unionId: string): UnionGeometry
   const b = personPos(doc, pb);
   const [l, r] = a.x <= b.x ? [a, b] : [b, a];
   const sameRow = Math.abs(a.y - b.y) < 1;
-  return { a, b, l, r, sameRow, busY: sameRow ? a.y : Math.max(a.y, b.y), midX: (a.x + b.x) / 2 };
+  return { a, b, l, r, sameRow, busY: (sameRow ? a.y : Math.max(a.y, b.y)) + UNION_DROP, midX: (a.x + b.x) / 2 };
 }
 
 const label = (x: number, y: number, text: string, anchor = "middle", fill = "black"): VNode =>
@@ -155,21 +158,23 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       style = unionLines.get("married")!;
     }
     const half = s / 2;
+    const ly = g.l.y + UNION_DROP;
+    const ry = g.r.y + UNION_DROP;
     const path: Point[] = g.sameRow
       ? [
-          { x: g.l.x + half, y: g.l.y },
-          { x: g.r.x - half, y: g.r.y },
+          { x: g.l.x + half, y: ly },
+          { x: g.r.x - half, y: ry },
         ]
       : [
-          { x: g.l.x + half, y: g.l.y },
-          { x: g.midX, y: g.l.y },
-          { x: g.midX, y: g.r.y },
-          { x: g.r.x - half, y: g.r.y },
+          { x: g.l.x + half, y: ly },
+          { x: g.midX, y: ly },
+          { x: g.midX, y: ry },
+          { x: g.r.x - half, y: ry },
         ];
-    const mid: Point = g.sameRow ? { x: g.midX, y: g.busY } : { x: g.midX, y: (g.l.y + g.r.y) / 2 };
+    const mid: Point = { x: g.midX, y: g.sameRow ? g.busY : (ly + ry) / 2 };
     let vnodes = [...style.renderLine(path), ...(style.renderAdornment?.(mid) ?? [])];
     if (u.color) vnodes = recolor(vnodes, u.color);
-    if (u.year != null) vnodes.push(haloLabel(mid.x, mid.y - 8, `${STATUS_PREFIX[u.status] ?? ""} ${u.year}`.trim(), u.color ?? "#444"));
+    if (u.year != null) vnodes.push(haloLabel(mid.x, mid.y + 16, `${STATUS_PREFIX[u.status] ?? ""} ${u.year}`.trim(), u.color ?? "#444"));
     lines.push({
       id: u.id,
       kind: "union",
@@ -177,7 +182,7 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       draggable: false,
       bounds: g.sameRow
         ? { x: g.l.x + half, y: g.busY - 8, w: Math.max(12, g.r.x - g.l.x - s), h: 16 }
-        : { x: g.midX - 8, y: Math.min(g.l.y, g.r.y), w: 16, h: Math.max(12, Math.abs(g.r.y - g.l.y)) },
+        : { x: g.midX - 8, y: Math.min(ly, ry), w: 16, h: Math.max(12, Math.abs(ry - ly)) },
       vnodes,
     });
   }
@@ -249,12 +254,10 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       warn(`unknown emotional kind \`${e.kind}\` on \`${e.id}\``);
       style = emotionalLines.get("close")!;
     }
-    // a pair that also shares a union (e.g. married AND cut off) gets its emotional
-    // line offset ABOVE the union line — the space below belongs to child stems
-    const partnered = [...doc.unions.values()].some((u) => u.partners.includes(e.between[0]) && u.partners.includes(e.between[1]));
-    const off = partnered ? -s * 0.85 : 0;
-    const ba = { ...absBox(e.between[0]), y: absBox(e.between[0]).y + off };
-    const bb = { ...absBox(e.between[1]), y: absBox(e.between[1]).y + off };
+    // emotional links connect shape edges at center height; a shared union line sits
+    // just below (UNION_DROP), so a married-and-cut-off pair reads as two close connectors
+    const ba = absBox(e.between[0]);
+    const bb = absBox(e.between[1]);
     let vs = style.render(ba, bb);
     if (e.color) vs = recolor(vs, e.color);
     emos.push({

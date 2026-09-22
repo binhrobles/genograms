@@ -33,23 +33,26 @@ describe("buildScene", () => {
     const doc = parseGenogram(FAMILY).doc!;
     const g = unionGeometry(doc, "binh-mai")!;
     expect(g.sameRow).toBe(true);
-    expect(g.busY).toBe(0); // children attach on the horizontal itself
+    expect(g.busY).toBe(12); // UNION_DROP below shape centers
     expect(g.midX).toBe(80);
     const u = buildScene(doc).elements.find((e) => e.id === "binh-mai")!;
-    // the line runs side-to-side: from binh's right edge to mai's left edge
-    expect(JSON.stringify(u.vnodes)).toContain(`"points":"20,0 140,0"`);
+    // the line runs side-to-side just below center: binh's right edge to mai's left edge
+    expect(JSON.stringify(u.vnodes)).toContain(`"points":"20,12 140,12"`);
   });
 
   it("elbows the union line when partners sit at different heights", () => {
     const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]\n[layout]\na = [0, 0]\nb = [200, 60]`;
     const u = scene(t).elements.find((e) => e.id === "u")!;
-    expect(JSON.stringify(u.vnodes)).toContain(`"points":"20,0 100,0 100,60 180,60"`);
+    expect(JSON.stringify(u.vnodes)).toContain(`"points":"20,12 100,12 100,72 180,72"`);
   });
 
-  it("offsets an emotional line above the union line for partnered pairs", () => {
+  it("keeps a partnered pair's emotional line touching the shapes, above the dropped union", () => {
     const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]\n[emotional.e]\nbetween = ["a","b"]\nkind = "cutoff"\n[layout]\na = [0,0]\nb = [200,0]`;
-    const e = scene(t).elements.find((el) => el.id === "e")!;
-    expect(e.hitLine![0].y).toBeLessThan(-20); // above the shapes, clear of child stems below
+    const s = scene(t);
+    const e = s.elements.find((el) => el.id === "e")!;
+    expect(e.hitLine![0]).toEqual({ x: 20, y: 0 }); // on a's right edge, center height
+    const u = s.elements.find((el) => el.id === "u")!;
+    expect(u.bounds.y).toBe(12 - 8); // union line 12px lower
   });
 
   it("gives 3+ children a shared stem and sibling bus", () => {
@@ -61,8 +64,8 @@ describe("buildScene", () => {
     expect(links).toHaveLength(1); // one grouped element, not three drops
     expect(links[0].id).toBe("childlink-u");
     const flat = JSON.stringify(links[0].vnodes);
-    // stem from union midpoint down to the sibling bus at min(childTop) - 30 = 100
-    expect(flat).toContain('"points":"100,0 100,100"');
+    // stem from the union line (y=12) down to the sibling bus at min(childTop) - 30 = 100
+    expect(flat).toContain('"points":"100,12 100,100"');
     // sibling bus spans the children
     expect(flat).toContain('"points":"-40,100 240,100"');
     // and each child hangs off it
