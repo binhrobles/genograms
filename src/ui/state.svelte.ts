@@ -8,66 +8,88 @@ export const DEFAULT_DOC = `# Welcome to Genogram — this TOML *is* the documen
 # Edit it directly, or click a person on the canvas for actions.
 
 [meta]
-title = "Example Family"
+title = "Ví dụ / Ejemplo"
 
-[people.george]
-name = "George"
+# ── Vietnamese side ─────────────────────
+[people.bao]
+name = "Bảo"
 sex = "M"
 birth = 1938
 death = 2011
 
-[people.rose]
-name = "Rose"
+[people.lan]
+name = "Lan"
 sex = "F"
-birth = 1941
+birth = "~1941" # approximate years are fine
 
-[unions.george-rose]
-partners = ["george", "rose"]
+[unions.bao-lan]
+partners = ["bao", "lan"]
 status = "married"
 year = 1963
 
-[people.frank]
-name = "Frank"
+[people.minh]
+name = "Minh"
 sex = "M"
 birth = 1965
-parents = "george-rose"
+parents = "bao-lan"
 
-[people.dana]
-name = "Dana"
+# ── Mexican side ────────────────────────
+[people.ernesto]
+name = "Ernesto"
+sex = "M"
+birth = 1935
+death = 2020
+
+[people.rosa-maria]
+name = "Rosa María"
+sex = "F"
+birth = 1940
+
+[unions.ernesto-rosa]
+partners = ["ernesto", "rosa-maria"]
+status = "married"
+year = 1960
+
+[people.lupe]
+name = "Guadalupe"
 sex = "F"
 birth = 1968
+parents = "ernesto-rosa"
 
-[unions.frank-dana]
-partners = ["frank", "dana"]
+# ── The parents & index person ──────────
+[unions.minh-lupe]
+partners = ["minh", "lupe"]
 status = "divorced"
-year = 1990
+year = 1995
 
-[people.alex]
-name = "Alex"
-sex = "M"
+[people.an]
+name = "An Sofía"
+sex = "F"
 birth = 1992
 index = true
-parents = "frank-dana"
+parents = "minh-lupe"
 
-[emotional.alex-frank]
-between = ["alex", "frank"]
+[emotional.an-minh]
+between = ["an", "minh"]
 kind = "conflict"
 
-[emotional.alex-rose]
-between = ["alex", "rose"]
+[emotional.an-lan]
+between = ["an", "lan"]
 kind = "close"
 
-[annotations.note-dana]
-text = "remarried, lives in Ohio"
-attach = "dana"
+[annotations.note-lupe]
+text = "remarried, back in Guadalajara"
+attach = "lupe"
 
 [layout]
-george = [0, 0]
-rose = [160, 0]
-frank = [80, 140]
-dana = [240, 140]
-alex = [160, 280]
-note-dana = [-24, 48]
+bao = [80, 0]
+lan = [240, 0]
+minh = [160, 140]
+ernesto = [480, 0]
+rosa-maria = [640, 0]
+lupe = [560, 140]
+an = [360, 280]
+note-lupe = [-30, 52]
 `;
 
 class AppState {
