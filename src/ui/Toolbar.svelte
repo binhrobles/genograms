@@ -72,6 +72,7 @@
     <button class:active={!app.editorCollapsed} onclick={() => (app.editorCollapsed = !app.editorCollapsed)} disabled={app.canvasCollapsed}>toml</button>
     <button class:active={!app.canvasCollapsed} onclick={() => (app.canvasCollapsed = !app.canvasCollapsed)} disabled={app.editorCollapsed}>canvas</button>
     <button class:active={app.libraryOpen} onclick={() => (app.libraryOpen = !app.libraryOpen)}>library</button>
+    <a class="about" href="https://github.com/binhrobles/genograms" target="_blank" rel="noopener noreferrer">about</a>
   </span>
 </header>
 
@@ -116,6 +117,16 @@
   .errors {
     font-size: 12px;
     color: #b3261e;
+  }
+  .about {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .about:hover {
+    background: #ececec;
   }
   .layerswrap {
     position: relative;
