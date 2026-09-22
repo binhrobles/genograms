@@ -16,10 +16,12 @@ const slash = (x: number, y: number): VNode => h("line", { x1: x - 5, y1: y + 9,
 const married: UnionLineStyle = { renderLine: line() };
 const cohabiting: UnionLineStyle = { renderLine: line("6 4") };
 const dating: UnionLineStyle = { renderLine: line("2 4") };
+const affair: UnionLineStyle = { renderLine: line("8 3 2 3") }; // dash-dot
 const separated: UnionLineStyle = { renderLine: line(), renderAdornment: (m) => [slash(m.x, m.y)] };
 const divorced: UnionLineStyle = { renderLine: line(), renderAdornment: (m) => [slash(m.x - 5, m.y), slash(m.x + 5, m.y)] };
 
 unionLines.register("married", married);
+unionLines.register("affair", affair);
 unionLines.register("cohabiting", cohabiting);
 unionLines.register("dating", dating);
 unionLines.register("separated", separated);

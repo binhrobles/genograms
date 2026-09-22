@@ -36,7 +36,7 @@ badge = "#e9d7f5"      # optional: name badge background
 
 [unions.mom-dad]
 partners = ["mom", "dad"]
-status = "divorced"    # married | divorced | separated | cohabiting | dating
+status = "divorced"    # married | divorced | separated | cohabiting | dating | affair
 year = 1988
 color = "#7a5195"      # optional: line color
 # The union line connects partners side-to-side (elbowing if they sit at

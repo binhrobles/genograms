@@ -71,8 +71,8 @@ describe("line styles", () => {
   const boxB: Box = { x: 140, y: 80, w: 40, h: 40 };
   const flat = (v: unknown) => JSON.stringify(v);
 
-  it("registers the five union statuses", () => {
-    expect(unionLines.names().sort()).toEqual(["cohabiting", "dating", "divorced", "married", "separated"]);
+  it("registers the six union statuses", () => {
+    expect(unionLines.names().sort()).toEqual(["affair", "cohabiting", "dating", "divorced", "married", "separated"]);
   });
   it("married solid, cohabiting dashed, dating dotted", () => {
     expect(flat(unionLines.get("married")!.renderLine(path))).not.toContain("stroke-dasharray");
