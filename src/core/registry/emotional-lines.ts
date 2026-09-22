@@ -1,5 +1,5 @@
 import { h, type VNode } from "../vnode";
-import { boxCenter, edgePoint, offsetParallel, zigzagPath, wavePath, type Box, type Point } from "../geom";
+import { boxCenter, edgePoint, offsetParallel, zigzagPath, type Box, type Point } from "../geom";
 import { emotionalLines, type EmotionalLineStyle } from "../registry";
 
 function endpoints(from: Box, to: Box): [Point, Point] {
@@ -23,23 +23,21 @@ const GRAY = { stroke: "#888" };
 const BLUE = { stroke: "#2a7ab8" };
 
 const close: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-2, 2], GREEN) };
-const fused: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-4, 0, 4], GREEN) };
+// GenoPro draws fusion/enmeshment red (triple line)
+const fused: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-4, 0, 4], RED) };
 const distant: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { ...GRAY, "stroke-dasharray": "6 5" }) };
 
-const conflict: EmotionalLineStyle = {
-  render: (f, t) => {
-    const [a, b] = endpoints(f, t);
-    return [h("path", { d: zigzagPath(a, b), fill: "none", "stroke-width": 1.5, ...RED })];
-  },
-};
+// GenoPro: discord/conflict = red double-dashed pair (the zigzag is `hostile`)
+const conflict: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-2, 2], { ...RED, "stroke-dasharray": "6 4" }) };
 
 const fusedConflict: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
-    return [...parallelLines(f, t, [-5, 5], RED), h("path", { d: zigzagPath(a, b, 4, 12), fill: "none", "stroke-width": 1.5, ...RED })];
+    return [...parallelLines(f, t, [-4, 0, 4], RED), h("path", { d: zigzagPath(a, b, 4, 12), fill: "none", "stroke-width": 1.5, ...RED })];
   },
 };
 
+// GenoPro: red dashed line broken by two bars
 const cutoff: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
@@ -51,8 +49,8 @@ const cutoff: EmotionalLineStyle = {
     const uy = dy / len;
     const nx = -uy;
     const ny = ux;
-    const bar = (c: Point): VNode => seg({ x: c.x + nx * 7, y: c.y + ny * 7 }, { x: c.x - nx * 7, y: c.y - ny * 7 }, { stroke: "black" });
-    return [seg(a, b, { stroke: "black" }), bar({ x: mid.x - ux * 4, y: mid.y - uy * 4 }), bar({ x: mid.x + ux * 4, y: mid.y + uy * 4 })];
+    const bar = (c: Point): VNode => seg({ x: c.x + nx * 7, y: c.y + ny * 7 }, { x: c.x - nx * 7, y: c.y - ny * 7 }, { ...RED, "stroke-width": 2 });
+    return [seg(a, b, { ...RED, "stroke-dasharray": "6 4" }), bar({ x: mid.x - ux * 4, y: mid.y - uy * 4 }), bar({ x: mid.x + ux * 4, y: mid.y + uy * 4 })];
   },
 };
 
@@ -80,18 +78,11 @@ const caretaker: EmotionalLineStyle = {
   },
 };
 
-const PINK = { stroke: "#d6336c" };
 const PURPLE = { stroke: "#6f42c1" };
 const DARKRED = { stroke: "#8b1a1a" };
-const OCHRE = { stroke: "#b8860b" };
 
-/** Smooth wave — the calm counterpart to conflict's zigzag. */
-const harmony: EmotionalLineStyle = {
-  render: (f, t) => {
-    const [a, b] = endpoints(f, t);
-    return [h("path", { d: wavePath(a, b), fill: "none", "stroke-width": 1.5, ...GREEN })];
-  },
-};
+/** GenoPro: harmony is a plain solid green line. */
+const harmony: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], GREEN) };
 
 /** Directional: between[0] is fixated ON between[1] — solid dot pinned at the target. */
 const fixation: EmotionalLineStyle = {
@@ -101,23 +92,20 @@ const fixation: EmotionalLineStyle = {
   },
 };
 
-/** Line with a heart at the midpoint. */
+/** GenoPro: love is a green line with an open circle at the midpoint. */
 const love: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
     const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    return [
-      seg(a, b, PINK),
-      h("text", { x: mid.x, y: mid.y + 4, "text-anchor": "middle", "font-size": 12, fill: PINK.stroke, stroke: "white", "stroke-width": 3, "paint-order": "stroke" }, ["♥"]),
-    ];
+    return [seg(a, b, GREEN), h("circle", { cx: mid.x, cy: mid.y, r: 6, fill: "white", ...GREEN, "stroke-width": 1.5 })];
   },
 };
 
-/** Directional: between[0] abuses between[1] — zigzag with an arrowhead at the victim. */
+/** Directional: between[0] abuses between[1] — GenoPro blue zigzag, arrowhead at the victim. */
 const abuse: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
-    return [h("path", { d: zigzagPath(a, b), fill: "none", "stroke-width": 1.5, ...DARKRED }), ...arrowLegs(a, b, DARKRED)];
+    return [h("path", { d: zigzagPath(a, b), fill: "none", "stroke-width": 1.5, ...BLUE }), ...arrowLegs(a, b, BLUE)];
   },
 };
 
@@ -125,7 +113,7 @@ const abuse: EmotionalLineStyle = {
 const distrust: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
-    return [seg(a, b, { ...OCHRE, "stroke-dasharray": "8 4" }), ...arrowLegs(a, b, OCHRE)];
+    return [seg(a, b, { ...RED, "stroke-dasharray": "8 4" }), ...arrowLegs(a, b, RED)];
   },
 };
 const indifferent: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { stroke: "#aaa", "stroke-dasharray": "2 8" }) };
@@ -135,10 +123,11 @@ const indifferent: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, 
 const midOf = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 const plain: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { stroke: "#666", "stroke-width": 1 }) };
+// GenoPro: hostile is THE red zigzag (conflict is the double-dashed pair)
 const hostile: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
-    return [h("path", { d: zigzagPath(a, b, 7, 10), fill: "none", "stroke-width": 2, ...RED })];
+    return [h("path", { d: zigzagPath(a, b), fill: "none", "stroke-width": 1.5, ...RED })];
   },
 };
 const violence: EmotionalLineStyle = {
@@ -147,7 +136,7 @@ const violence: EmotionalLineStyle = {
     return [h("path", { d: zigzagPath(a, b, 7, 8), fill: "none", "stroke-width": 2.5, ...DARKRED })];
   },
 };
-const hate: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-2, 2], { ...RED, "stroke-dasharray": "4 3" }) };
+const hate: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-2, 2], { ...RED, "stroke-dasharray": "3 3" }) };
 
 /** Directional: between[0] is jealous OF between[1] — diamond at midpoint, arrow at target. */
 const jealous: EmotionalLineStyle = {
@@ -208,15 +197,15 @@ const bestFriends: EmotionalLineStyle = {
   },
 };
 
-/** Two interlocked rings at the midpoint. */
+/** GenoPro: in love — two interlocked green rings at the midpoint. */
 const inLove: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
     const m = midOf(a, b);
     return [
-      seg(a, b, PINK),
-      h("circle", { cx: m.x - 4, cy: m.y, r: 6, fill: "none", ...PINK, "stroke-width": 1.5 }),
-      h("circle", { cx: m.x + 4, cy: m.y, r: 6, fill: "none", ...PINK, "stroke-width": 1.5 }),
+      seg(a, b, GREEN),
+      h("circle", { cx: m.x - 4, cy: m.y, r: 6, fill: "none", ...GREEN, "stroke-width": 1.5 }),
+      h("circle", { cx: m.x + 4, cy: m.y, r: 6, fill: "none", ...GREEN, "stroke-width": 1.5 }),
     ];
   },
 };

@@ -105,15 +105,19 @@ describe("line styles", () => {
       "indifferent", "jealous", "love", "manipulative", "neglect", "never-met", "plain", "violence",
     ]);
   });
-  it("harmony is a smooth curve (Q segments), not a zigzag", () => {
-    const [wave] = emotionalLines.get("harmony")!.render(boxA, boxB);
-    expect(String(wave.attrs.d)).toContain("Q ");
+  it("harmony is a plain solid green line", () => {
+    const vs = emotionalLines.get("harmony")!.render(boxA, boxB);
+    expect(vs).toHaveLength(1);
+    expect(vs[0].tag).toBe("line");
+    expect(vs[0].attrs.stroke).toBe("#2e8b57");
+    expect(vs[0].attrs["stroke-dasharray"]).toBeUndefined();
   });
-  it("fixation pins a dot at the target; abuse arrows the zigzag at the victim", () => {
+  it("fixation pins a dot at the target; abuse is a BLUE zigzag arrowed at the victim", () => {
     const fix = emotionalLines.get("fixation")!.render(boxA, boxB);
     expect(fix.some((v) => v.tag === "circle")).toBe(true);
     const ab = emotionalLines.get("abuse")!.render(boxA, boxB);
     expect(ab[0].tag).toBe("path");
+    expect(ab[0].attrs.stroke).toBe("#2a7ab8");
     expect(ab).toHaveLength(3); // zigzag + two arrow legs
   });
   it("distrust is directional: dashed line + solid arrow legs at the target", () => {
@@ -122,8 +126,10 @@ describe("line styles", () => {
     expect(vs[0].attrs["stroke-dasharray"]).toBe("8 4");
     expect(vs[1].attrs["stroke-dasharray"]).toBeUndefined(); // arrowhead stays solid
   });
-  it("love halos a heart at the midpoint", () => {
-    expect(JSON.stringify(emotionalLines.get("love")!.render(boxA, boxB))).toContain("♥");
+  it("love is a green line with an open circle at the midpoint", () => {
+    const vs = emotionalLines.get("love")!.render(boxA, boxB);
+    expect(vs.some((v) => v.tag === "circle" && v.attrs.fill === "white")).toBe(true);
+    expect(vs[0].attrs.stroke).toBe("#2e8b57");
   });
   it("caretaker draws a line plus a 2-leg arrowhead at the recipient end", () => {
     const vs = emotionalLines.get("caretaker")!.render(boxA, boxB);
@@ -133,11 +139,20 @@ describe("line styles", () => {
     expect(leg1.attrs.x1).toBe(leg2.attrs.x1);
     expect(leg1.attrs.y1).toBe(leg2.attrs.y1);
   });
-  it("close = 2 lines, fused = 3, cutoff = line + 2 bars, conflict zigzags, distant dashes", () => {
+  it("close = 2 lines, fused = 3 red, cutoff = red dashed + 2 bars, distant dashes", () => {
     expect(emotionalLines.get("close")!.render(boxA, boxB)).toHaveLength(2);
-    expect(emotionalLines.get("fused")!.render(boxA, boxB)).toHaveLength(3);
-    expect(emotionalLines.get("cutoff")!.render(boxA, boxB)).toHaveLength(3);
-    expect(emotionalLines.get("conflict")!.render(boxA, boxB).some((v) => v.tag === "path")).toBe(true);
+    const fused = emotionalLines.get("fused")!.render(boxA, boxB);
+    expect(fused).toHaveLength(3);
+    expect(fused[0].attrs.stroke).toBe("#c0392b");
+    const cut = emotionalLines.get("cutoff")!.render(boxA, boxB);
+    expect(cut).toHaveLength(3);
+    expect(cut[0].attrs["stroke-dasharray"]).toBe("6 4");
     expect(flat(emotionalLines.get("distant")!.render(boxA, boxB))).toContain("stroke-dasharray");
+  });
+  it("conflict is a red double-dashed pair; hostile is the zigzag", () => {
+    const conflict = emotionalLines.get("conflict")!.render(boxA, boxB);
+    expect(conflict).toHaveLength(2);
+    expect(conflict.every((v) => v.tag === "line" && v.attrs["stroke-dasharray"] === "6 4")).toBe(true);
+    expect(emotionalLines.get("hostile")!.render(boxA, boxB)[0].tag).toBe("path");
   });
 });
