@@ -46,10 +46,35 @@ describe("buildScene", () => {
     expect(JSON.stringify(u.vnodes)).toContain(`"points":"20,0 100,0 100,60 180,60"`);
   });
 
-  it("offsets an emotional line below the union line for partnered pairs", () => {
+  it("offsets an emotional line above the union line for partnered pairs", () => {
     const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]\n[emotional.e]\nbetween = ["a","b"]\nkind = "cutoff"\n[layout]\na = [0,0]\nb = [200,0]`;
     const e = scene(t).elements.find((el) => el.id === "e")!;
-    expect(e.hitLine![0].y).toBeGreaterThan(20); // below the shapes, not through their centers
+    expect(e.hitLine![0].y).toBeLessThan(-20); // above the shapes, clear of child stems below
+  });
+
+  it("gives 3+ children a shared stem and sibling bus", () => {
+    const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]
+[people.c1]\nparents = "u"\n[people.c2]\nparents = "u"\n[people.c3]\nparents = "u"
+[layout]\na = [0,0]\nb = [200,0]\nc1 = [-40,150]\nc2 = [100,150]\nc3 = [240,150]`;
+    const s = scene(t);
+    const links = s.elements.filter((e) => e.kind === "child-link");
+    expect(links).toHaveLength(1); // one grouped element, not three drops
+    expect(links[0].id).toBe("childlink-u");
+    const flat = JSON.stringify(links[0].vnodes);
+    // stem from union midpoint down to the sibling bus at min(childTop) - 30 = 100
+    expect(flat).toContain('"points":"100,0 100,100"');
+    // sibling bus spans the children
+    expect(flat).toContain('"points":"-40,100 240,100"');
+    // and each child hangs off it
+    expect(flat).toContain('"points":"-40,100 -40,130"');
+  });
+
+  it("keeps individual drops for 1–2 children", () => {
+    const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]
+[people.c1]\nparents = "u"\n[people.c2]\nparents = "u"
+[layout]\na = [0,0]\nb = [200,0]\nc1 = [60,150]\nc2 = [140,150]`;
+    const links = scene(t).elements.filter((e) => e.kind === "child-link");
+    expect(links.map((l) => l.id).sort()).toEqual(["childlink-c1", "childlink-c2"]);
   });
 
   it("renders deceased X when death is set", () => {

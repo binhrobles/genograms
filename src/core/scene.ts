@@ -182,50 +182,64 @@ export function buildScene(doc: GenoDocument): SceneGraph {
     });
   }
 
-  for (const p of doc.people.values()) {
-    if (!p.parents) continue;
-    const child = personPos(doc, p.id);
-    const childTop = child.y - s / 2;
-    let path: Point[] | null = null;
-    const g = doc.unions.has(p.parents) ? unionGeometry(doc, p.parents) : null;
-    if (g) {
-      const lo = g.l.x + s / 2 + 6;
-      const hi = g.r.x - s / 2 - 6;
-      if (g.sameRow && child.x >= lo && child.x <= hi) {
+  const CHILD_STROKE = { fill: "none", stroke: "black", "stroke-width": 1.2 } as const;
+  const polyline = (pts: Point[]): VNode => h("polyline", { points: pts.map((q) => `${q.x},${q.y}`).join(" "), ...CHILD_STROKE });
+  const pathElement = (id: string, vnodes: VNode[], pts: Point[]): SceneElement => {
+    const xs = pts.map((q) => q.x);
+    const ys = pts.map((q) => q.y);
+    return {
+      id,
+      kind: "child-link",
+      selectable: false,
+      draggable: false,
+      bounds: { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) },
+      vnodes,
+    };
+  };
+
+  // group children by parents ref: 1–2 kids get individual drops; 3+ share a
+  // single stem out of the union plus a sibling bus that branches to each child
+  const byParent = new Map<string, Person[]>();
+  for (const p of doc.people.values()) if (p.parents) byParent.set(p.parents, [...(byParent.get(p.parents) ?? []), p]);
+
+  for (const [ref, kids] of byParent) {
+    const g = doc.unions.has(ref) ? unionGeometry(doc, ref) : null;
+    const par = !g && doc.people.has(ref) ? personPos(doc, ref) : null;
+    if (!g && !par) continue; // unresolved ref: validator already errored
+    const stem: Point = g ? { x: g.midX, y: g.busY } : { x: par!.x, y: par!.y + s / 2 };
+
+    if (kids.length >= 3) {
+      const kidPts = kids.map((k) => personPos(doc, k.id));
+      const sibY = Math.min(...kidPts.map((q) => q.y - s / 2)) - 30;
+      const minX = Math.min(...kidPts.map((q) => q.x), stem.x);
+      const maxX = Math.max(...kidPts.map((q) => q.x), stem.x);
+      const vnodes = [
+        polyline([stem, { x: stem.x, y: sibY }]),
+        polyline([
+          { x: minX, y: sibY },
+          { x: maxX, y: sibY },
+        ]),
+        ...kidPts.map((q) => polyline([{ x: q.x, y: sibY }, { x: q.x, y: q.y - s / 2 }])),
+      ];
+      lines.push(pathElement(`childlink-${ref}`, vnodes, [stem, { x: minX, y: sibY }, { x: maxX, y: sibY }, ...kidPts.map((q) => ({ x: q.x, y: q.y - s / 2 }))]));
+      continue;
+    }
+
+    for (const p of kids) {
+      const child = personPos(doc, p.id);
+      const childTop = child.y - s / 2;
+      let path: Point[];
+      if (g && g.sameRow && child.x >= g.l.x + s / 2 + 6 && child.x <= g.r.x - s / 2 - 6) {
         path = [
           { x: child.x, y: g.busY },
           { x: child.x, y: childTop },
         ];
       } else {
-        const my = (g.busY + childTop) / 2;
-        path = [
-          { x: g.midX, y: g.busY },
-          { x: g.midX, y: my },
-          { x: child.x, y: my },
-          { x: child.x, y: childTop },
-        ];
+        const my = (stem.y + childTop) / 2;
+        path = [stem, { x: stem.x, y: my }, { x: child.x, y: my }, { x: child.x, y: childTop }];
       }
-    } else if (doc.people.has(p.parents)) {
-      const par = personPos(doc, p.parents);
-      const my = (par.y + s / 2 + childTop) / 2;
-      path = [
-        { x: par.x, y: par.y + s / 2 },
-        { x: par.x, y: my },
-        { x: child.x, y: my },
-        { x: child.x, y: childTop },
-      ];
+      lines.push(pathElement(`childlink-${p.id}`, [polyline(path)], path));
     }
-    if (!path) continue; // unresolved ref: validator already errored
-    const xs = path.map((q) => q.x);
-    const ys = path.map((q) => q.y);
-    lines.push({
-      id: `childlink-${p.id}`,
-      kind: "child-link",
-      selectable: false,
-      draggable: false,
-      bounds: { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) },
-      vnodes: [h("polyline", { points: path.map((q) => `${q.x},${q.y}`).join(" "), fill: "none", stroke: "black", "stroke-width": 1.2 })],
-    });
   }
 
   for (const e of doc.emotional.values()) {
@@ -236,9 +250,9 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       style = emotionalLines.get("close")!;
     }
     // a pair that also shares a union (e.g. married AND cut off) gets its emotional
-    // line offset below the union line so both stay readable
+    // line offset ABOVE the union line — the space below belongs to child stems
     const partnered = [...doc.unions.values()].some((u) => u.partners.includes(e.between[0]) && u.partners.includes(e.between[1]));
-    const off = partnered ? s * 0.85 : 0;
+    const off = partnered ? -s * 0.85 : 0;
     const ba = { ...absBox(e.between[0]), y: absBox(e.between[0]).y + off };
     const bb = { ...absBox(e.between[1]), y: absBox(e.between[1]).y + off };
     let vs = style.render(ba, bb);
