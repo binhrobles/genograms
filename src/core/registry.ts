@@ -18,9 +18,14 @@ export class Registry<T> {
   }
 }
 
+export interface ShapeStyle {
+  fill: string;
+  stroke: string;
+}
+
 /** Base shape per sex, drawn centered on the origin. */
 export interface PersonShape {
-  render(size: number): VNode[];
+  render(size: number, style?: ShapeStyle): VNode[];
   bounds(size: number): Box;
 }
 

@@ -10,6 +10,9 @@ export interface Person {
   decorations: string[];
   notes?: string;
   parents?: string; // union id, or person id for single-parent
+  color?: string; // shape stroke + decoration marks + badge border
+  fill?: string; // shape interior
+  badge?: string; // name badge background
 }
 
 export interface Union {
@@ -18,18 +21,21 @@ export interface Union {
   status: string;
   year?: number | string;
   decorations: string[];
+  color?: string; // overrides the line color
 }
 
 export interface EmotionalLink {
   id: string;
   between: string[];
   kind: string;
+  color?: string; // overrides the kind's default color
 }
 
 export interface Annotation {
   id: string;
-  text: string;
+  text: string; // may contain newlines (TOML multiline strings render as multiple lines)
   attach?: string; // person id; layout entry becomes an offset from that person
+  color?: string; // text color
 }
 
 export interface GenoDocument {

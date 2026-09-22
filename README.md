@@ -25,21 +25,31 @@ sex = "F"              # "M" square | "F" circle | "U" diamond
 birth = 1990           # numbers or strings: "~1930", "192?", "c. 1930", "1990-03-02"
 death = 2085           # presence adds the deceased ✗; strings render verbatim
 index = true           # double border (the "self" of the genogram)
-decorations = ["substance-abuse"]   # combinable, extensible
+decorations = ["alcoholism"]        # combinable, extensible; built-ins:
+                       #   alcoholism / substance-abuse (bottom-half fill),
+                       #   in-recovery (bottom-half hatch), mental-illness (left half),
+                       #   physical-illness (right half), deceased, index
 parents = "mom-dad"    # union id, or a person id for single-parent
+color = "#7a5195"      # optional: shape stroke, decoration ink, badge border
+fill = "#f3e8fa"       # optional: shape interior
+badge = "#e9d7f5"      # optional: name badge background
 
 [unions.mom-dad]
 partners = ["mom", "dad"]
 status = "divorced"    # married | divorced | separated | cohabiting | dating
 year = 1988
+color = "#7a5195"      # optional: line color
 
 [emotional.ada-mom]
 between = ["ada", "mom"]
 kind = "close"         # close | fused | conflict | fused-conflict | cutoff | distant
+color = "#e07b39"      # optional: overrides the kind's default color
 
 [annotations.n1]
-text = "moved to NYC"
+text = """multiline works —
+use TOML triple-quoted strings"""
 attach = "ada"         # optional; attached notes move with the person
+color = "#888"         # optional: text color
 
 [layout]               # machine-managed positions; drag on the canvas to update
 ada = [0, 0]

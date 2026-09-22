@@ -64,4 +64,35 @@ describe("buildScene", () => {
     const t = `[unions.u]\npartners = ["ghost", "ghost2"]`;
     expect(scene(t).elements.find((e) => e.id === "u")).toBeUndefined();
   });
+
+  it("renders the name in a badge pill", () => {
+    const binh = scene(FAMILY).elements.find((e) => e.id === "binh")!;
+    const flat = JSON.stringify(binh.vnodes);
+    expect(flat).toContain('"rx":8.5');
+  });
+
+  it("applies person color/fill/badge overrides", () => {
+    const t = `[people.a]\nname = "A"\ncolor = "#123456"\nfill = "#eeffee"\nbadge = "#ffeecc"\n[layout]\na = [0,0]`;
+    const flat = JSON.stringify(scene(t).elements.find((e) => e.id === "a")!.vnodes);
+    expect(flat).toContain("#123456");
+    expect(flat).toContain("#eeffee");
+    expect(flat).toContain("#ffeecc");
+  });
+
+  it("recolors union and emotional lines via color field", () => {
+    const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]\ncolor = "#0000ff"\n[emotional.e]\nbetween = ["a","b"]\nkind = "conflict"\ncolor = "#00ff00"\n[layout]\na=[0,0]\nb=[160,0]`;
+    const s = scene(t);
+    expect(JSON.stringify(s.elements.find((e) => e.id === "u")!.vnodes)).toContain("#0000ff");
+    const emo = JSON.stringify(s.elements.find((e) => e.id === "e")!.vnodes);
+    expect(emo).toContain("#00ff00");
+    expect(emo).not.toContain("#c0392b"); // conflict's default red is fully replaced
+  });
+
+  it("renders multiline annotations as tspans", () => {
+    const t = `[annotations.n]\ntext = """line one\nline two\nline three"""\n[layout]\nn = [0,0]`;
+    const n = scene(t).elements.find((e) => e.id === "n")!;
+    const flat = JSON.stringify(n.vnodes);
+    expect(flat.match(/tspan/g)?.length).toBe(3);
+    expect(n.bounds.h).toBe(6 + 14 * 3);
+  });
 });

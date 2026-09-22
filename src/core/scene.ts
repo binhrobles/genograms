@@ -42,6 +42,19 @@ export function unionGeometry(doc: GenoDocument, unionId: string): { a: Point; b
 const label = (x: number, y: number, text: string, anchor = "middle", fill = "black"): VNode =>
   h("text", { x, y, "text-anchor": anchor, "font-size": 12, fill, stroke: "none" }, [text]);
 
+/** Text with a white halo so crossing lines stay legible behind it. */
+const haloLabel = (x: number, y: number, text: string, fill = "black"): VNode =>
+  h("text", { x, y, "text-anchor": "middle", "font-size": 12, fill, stroke: "white", "stroke-width": 3, "paint-order": "stroke" }, [text]);
+
+/** Override every stroke in a vnode tree (color customization for line styles). */
+function recolor(vs: VNode[], color: string): VNode[] {
+  return vs.map((v) => ({
+    ...v,
+    attrs: v.attrs.stroke && v.attrs.stroke !== "none" ? { ...v.attrs, stroke: color } : v.attrs,
+    children: v.children?.map((c) => (typeof c === "string" ? c : recolor([c], color)[0])),
+  }));
+}
+
 function yearsLabel(p: Person): string | null {
   if (p.birth != null && p.death != null) return `${p.birth}–${p.death}`;
   if (p.birth != null) return `b. ${p.birth}`;
@@ -89,9 +102,16 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       (deco.layer === "under" ? under : over).push(...deco.render(box, p));
     }
     const texts: VNode[] = [];
-    if (p.name) texts.push(label(0, s / 2 + 16, p.name));
+    if (p.name) {
+      // name badge: rounded pill under the shape, drawn over any lines passing beneath
+      const bw = Math.max(26, p.name.length * 6.8 + 14);
+      texts.push(
+        h("rect", { x: -bw / 2, y: s / 2 + 6, width: bw, height: 17, rx: 8.5, fill: p.badge ?? "white", stroke: p.color ?? "#bbb", "stroke-width": 1 }),
+        label(0, s / 2 + 18.5, p.name),
+      );
+    }
     const yrs = yearsLabel(p);
-    if (yrs) texts.push(label(0, -s / 2 - 8, yrs));
+    if (yrs) texts.push(haloLabel(0, -s / 2 - 8, yrs));
     persons.push({
       id: p.id,
       kind: "person",
@@ -99,9 +119,16 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       draggable: true,
       layoutPos: doc.layout.get(p.id) ?? [0, 0],
       bounds: { x: pos.x + box.x, y: pos.y + box.y, w: box.w, h: box.h },
-      // shape first, then "under" decorations (fills — above the shape's white fill,
+      // shape first, then "under" decorations (fills — above the shape's fill,
       // below the "over" marks like ✗ and the index border), then labels
-      vnodes: [h("g", { transform: `translate(${pos.x}, ${pos.y})` }, [...shape.render(s), ...under, ...over, ...texts])],
+      vnodes: [
+        h("g", { transform: `translate(${pos.x}, ${pos.y})` }, [
+          ...shape.render(s, { fill: p.fill ?? "white", stroke: p.color ?? "black" }),
+          ...under,
+          ...over,
+          ...texts,
+        ]),
+      ],
     });
   }
 
@@ -119,8 +146,9 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       { x: g.b.x, y: g.busY },
       { x: g.b.x, y: g.b.y + s / 2 },
     ];
-    const vnodes = [...style.renderLine(path), ...(style.renderAdornment?.({ x: g.midX, y: g.busY }) ?? [])];
-    if (u.year != null) vnodes.push(label(g.midX, g.busY + 16, `${STATUS_PREFIX[u.status] ?? ""} ${u.year}`.trim(), "middle", "#444"));
+    let vnodes = [...style.renderLine(path), ...(style.renderAdornment?.({ x: g.midX, y: g.busY }) ?? [])];
+    if (u.color) vnodes = recolor(vnodes, u.color);
+    if (u.year != null) vnodes.push(haloLabel(g.midX, g.busY + 16, `${STATUS_PREFIX[u.status] ?? ""} ${u.year}`.trim(), u.color ?? "#444"));
     lines.push({
       id: u.id,
       kind: "union",
@@ -186,6 +214,8 @@ export function buildScene(doc: GenoDocument): SceneGraph {
     }
     const ba = absBox(e.between[0]);
     const bb = absBox(e.between[1]);
+    let vs = style.render(ba, bb);
+    if (e.color) vs = recolor(vs, e.color);
     emos.push({
       id: e.id,
       kind: "emotional",
@@ -193,7 +223,7 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       draggable: false,
       bounds: expandBox(unionBoxes([ba, bb]), 6),
       hitLine: [edgePoint(ba, boxCenter(bb)), edgePoint(bb, boxCenter(ba))],
-      vnodes: style.render(ba, bb),
+      vnodes: vs,
     });
   }
 
@@ -202,14 +232,26 @@ export function buildScene(doc: GenoDocument): SceneGraph {
     const attached = a.attach != null && doc.people.has(a.attach);
     const base = attached ? personPos(doc, a.attach!) : { x: 0, y: 0 };
     const pos = attached ? { x: base.x + raw[0], y: base.y + raw[1] } : { x: raw[0], y: raw[1] };
+    const textLines = a.text.split("\n");
     notes.push({
       id: a.id,
       kind: "annotation",
       selectable: true,
       draggable: true,
       layoutPos: raw,
-      bounds: { x: pos.x, y: pos.y - 10, w: Math.max(20, 7 * a.text.length), h: 16 },
-      vnodes: [label(pos.x, pos.y, a.text, "start", "#444")],
+      bounds: {
+        x: pos.x,
+        y: pos.y - 10,
+        w: Math.max(20, 7 * Math.max(...textLines.map((l) => l.length))),
+        h: 6 + 14 * textLines.length,
+      },
+      vnodes: [
+        h(
+          "text",
+          { x: pos.x, y: pos.y, "text-anchor": "start", "font-size": 12, fill: a.color ?? "#444", stroke: "none" },
+          textLines.map((ln, i) => h("tspan", { x: pos.x, dy: i === 0 ? 0 : 14 }, [ln])),
+        ),
+      ],
     });
   }
 

@@ -50,6 +50,14 @@ describe("decorations", () => {
     const vs = decorations.get("substance-abuse")!.render(box, person());
     expect(JSON.stringify(vs)).toContain("clipPath");
   });
+  it("registers the clinical fill set", () => {
+    for (const n of ["alcoholism", "in-recovery", "mental-illness", "physical-illness"]) {
+      expect(decorations.get(n), n).toBeDefined();
+      expect(decorations.get(n)!.layer).toBe("under");
+    }
+    // in-recovery hatches instead of solid-filling
+    expect(JSON.stringify(decorations.get("in-recovery")!.render(box, person())).match(/"line"/g)!.length).toBeGreaterThan(3);
+  });
 });
 
 describe("line styles", () => {

@@ -121,6 +121,9 @@ export function parseGenogram(text: string): ParseResult {
           decorations: take(raw, fields, "decorations", strArray, "an array of strings") ?? [],
           notes: take(raw, fields, "notes", asStr, "a string"),
           parents: take(raw, fields, "parents", asStr, "a string id"),
+          color: take(raw, fields, "color", asStr, "a color string"),
+          fill: take(raw, fields, "fill", asStr, "a color string"),
+          badge: take(raw, fields, "badge", asStr, "a color string"),
         };
         doc.people.set(id, p);
       } else if (kind === "unions") {
@@ -130,6 +133,7 @@ export function parseGenogram(text: string): ParseResult {
           status: take(raw, fields, "status", asStr, "a string") ?? "married",
           year: take(raw, fields, "year", asStrOrNum, "a number or string"),
           decorations: take(raw, fields, "decorations", strArray, "an array of strings") ?? [],
+          color: take(raw, fields, "color", asStr, "a color string"),
         };
         doc.unions.set(id, u);
       } else if (kind === "emotional") {
@@ -137,6 +141,7 @@ export function parseGenogram(text: string): ParseResult {
           id,
           between: take(raw, fields, "between", strArray, "an array of 2 person ids") ?? [],
           kind: take(raw, fields, "kind", asStr, "a string") ?? "close",
+          color: take(raw, fields, "color", asStr, "a color string"),
         };
         doc.emotional.set(id, l);
       } else {
@@ -144,6 +149,7 @@ export function parseGenogram(text: string): ParseResult {
           id,
           text: take(raw, fields, "text", asStr, "a string") ?? "",
           attach: take(raw, fields, "attach", asStr, "a person id"),
+          color: take(raw, fields, "color", asStr, "a color string"),
         };
         doc.annotations.set(id, a);
       }
