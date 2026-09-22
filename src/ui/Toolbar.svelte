@@ -1,0 +1,100 @@
+<script lang="ts">
+  import { app, canvasApi, DEFAULT_DOC } from "./state.svelte";
+  import { editorUndo, editorRedo, replaceAll } from "./editor";
+  import { saveTOML, openTOMLFile, exportSVG, exportPNG } from "./files";
+
+  let fileInput: HTMLInputElement;
+
+  function newDoc() {
+    if (confirm("Replace the current document with the example? (Undo still works.)")) replaceAll(DEFAULT_DOC);
+  }
+  function onOpen(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) openTOMLFile(file);
+    (e.target as HTMLInputElement).value = "";
+  }
+  const errors = $derived(app.diagnostics.filter((d) => d.severity === "error").length);
+</script>
+
+<header>
+  <span class="title">{app.doc?.title ?? "Genogram"}</span>
+
+  <span class="group">
+    <button onclick={newDoc}>new</button>
+    <button onclick={() => fileInput.click()}>open</button>
+    <button onclick={saveTOML}>save</button>
+    <input type="file" accept=".toml" bind:this={fileInput} onchange={onOpen} hidden />
+  </span>
+
+  <span class="group">
+    <button onclick={editorUndo}>↶</button>
+    <button onclick={editorRedo}>↷</button>
+  </span>
+
+  <span class="group">
+    <button onclick={() => canvasApi.zoomOut?.()}>−</button>
+    <button onclick={() => canvasApi.zoomFit?.()}>fit</button>
+    <button onclick={() => canvasApi.zoomIn?.()}>+</button>
+  </span>
+
+  <span class="group">
+    <button onclick={exportSVG}>export svg</button>
+    <button onclick={() => exportPNG()}>export png</button>
+  </span>
+
+  <span class="spacer"></span>
+
+  {#if errors > 0}
+    <span class="errors">{errors} error{errors === 1 ? "" : "s"}</span>
+  {/if}
+
+  <span class="group">
+    <button class:active={!app.editorCollapsed} onclick={() => (app.editorCollapsed = !app.editorCollapsed)} disabled={app.canvasCollapsed}>toml</button>
+    <button class:active={!app.canvasCollapsed} onclick={() => (app.canvasCollapsed = !app.canvasCollapsed)} disabled={app.editorCollapsed}>canvas</button>
+    <button class:active={app.libraryOpen} onclick={() => (app.libraryOpen = !app.libraryOpen)}>library</button>
+  </span>
+</header>
+
+<style>
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 12px;
+    border-bottom: 1px solid #ddd;
+    background: #f7f7f7;
+    flex: none;
+  }
+  .title {
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .group {
+    display: flex;
+    gap: 2px;
+  }
+  .spacer {
+    flex: 1;
+  }
+  button {
+    border: 1px solid transparent;
+    background: none;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  button:hover:not(:disabled) {
+    background: #ececec;
+  }
+  button:disabled {
+    opacity: 0.4;
+  }
+  button.active {
+    border-color: #ccc;
+    background: white;
+  }
+  .errors {
+    font-size: 12px;
+    color: #b3261e;
+  }
+</style>

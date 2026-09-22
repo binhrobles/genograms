@@ -98,7 +98,9 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       draggable: true,
       layoutPos: doc.layout.get(p.id) ?? [0, 0],
       bounds: { x: pos.x + box.x, y: pos.y + box.y, w: box.w, h: box.h },
-      vnodes: [h("g", { transform: `translate(${pos.x}, ${pos.y})` }, [...under, ...shape.render(s), ...over, ...texts])],
+      // shape first, then "under" decorations (fills — above the shape's white fill,
+      // below the "over" marks like ✗ and the index border), then labels
+      vnodes: [h("g", { transform: `translate(${pos.x}, ${pos.y})` }, [...shape.render(s), ...under, ...over, ...texts])],
     });
   }
 

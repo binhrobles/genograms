@@ -133,6 +133,11 @@ export function removeElement(text: string, map: SourceMap, doc: GenoDocument, i
   return dedupeEdits(edits);
 }
 
+/** Remove several elements at once (cascades included), deduped across overlapping cascades. */
+export function removeElements(text: string, map: SourceMap, doc: GenoDocument, ids: string[]): TextEdit[] {
+  return dedupeEdits(ids.flatMap((id) => removeElement(text, map, doc, id)));
+}
+
 /** Rename an element id everywhere: table header, layout key, and all reference sites. */
 export function renameId(text: string, map: SourceMap, doc: GenoDocument, oldId: string, newId: string): TextEdit[] {
   const el = map.elements.get(oldId);
