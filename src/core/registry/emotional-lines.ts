@@ -120,7 +120,13 @@ const abuse: EmotionalLineStyle = {
   },
 };
 
-const distrust: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { ...OCHRE, "stroke-dasharray": "8 4" }) };
+/** Directional: between[0] distrusts between[1] — dashed line, arrow at the distrusted. */
+const distrust: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    return [seg(a, b, { ...OCHRE, "stroke-dasharray": "8 4" }), ...arrowLegs(a, b, OCHRE)];
+  },
+};
 const indifferent: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [0], { stroke: "#aaa", "stroke-dasharray": "2 8" }) };
 
 emotionalLines.register("close", close);

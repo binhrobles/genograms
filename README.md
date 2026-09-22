@@ -52,9 +52,10 @@ color = "#7a5195"      # optional: line color
 [emotional.ada-mom]
 between = ["ada", "mom"]
 kind = "close"         # close | fused | conflict | fused-conflict | cutoff | distant
-                       # | harmony | love | distrust | indifferent
+                       # | harmony | love | indifferent
                        # directional kinds (between[0] acts on between[1]):
-                       # | caretaker (arrow) | fixation (dot at target) | abuse (zigzag + arrow)
+                       # | caretaker (arrow) | fixation (dot at target)
+                       # | abuse (zigzag + arrow) | distrust (dashed + arrow)
 color = "#e07b39"      # optional: overrides the kind's default color
 
 [annotations.n1]

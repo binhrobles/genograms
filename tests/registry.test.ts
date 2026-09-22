@@ -102,6 +102,12 @@ describe("line styles", () => {
     expect(ab[0].tag).toBe("path");
     expect(ab).toHaveLength(3); // zigzag + two arrow legs
   });
+  it("distrust is directional: dashed line + solid arrow legs at the target", () => {
+    const vs = emotionalLines.get("distrust")!.render(boxA, boxB);
+    expect(vs).toHaveLength(3);
+    expect(vs[0].attrs["stroke-dasharray"]).toBe("8 4");
+    expect(vs[1].attrs["stroke-dasharray"]).toBeUndefined(); // arrowhead stays solid
+  });
   it("love halos a heart at the midpoint", () => {
     expect(JSON.stringify(emotionalLines.get("love")!.render(boxA, boxB))).toContain("♥");
   });
