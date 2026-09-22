@@ -13,6 +13,7 @@ export interface Person {
   color?: string; // shape stroke + decoration marks + badge border
   fill?: string; // shape interior
   badge?: string; // name badge background
+  shape?: string; // overrides the sex-derived shape (e.g. miscarriage, pregnancy, abortion)
 }
 
 export interface Union {

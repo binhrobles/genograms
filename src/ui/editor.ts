@@ -107,9 +107,14 @@ function genogramCompletions(ctx: CompletionContext): CompletionResult | null {
   const line = ctx.state.doc.lineAt(ctx.pos);
   const before = line.text.slice(0, ctx.pos - line.from);
   const mk = (names: string[]) => names.map((label) => ({ label, type: "constant" as const }));
-  let m = before.match(/(status|kind|sex)\s*=\s*"([\w-]*)$/);
+  let m = before.match(/(status|kind|sex|shape)\s*=\s*"([\w-]*)$/);
   if (m) {
-    const opts = m[1] === "status" ? unionLines.names() : m[1] === "kind" ? emotionalLines.names() : personShapes.names();
+    const SEXES = ["M", "F", "U"];
+    const opts =
+      m[1] === "status" ? unionLines.names()
+      : m[1] === "kind" ? emotionalLines.names()
+      : m[1] === "sex" ? SEXES
+      : personShapes.names().filter((n) => !SEXES.includes(n));
     return { from: ctx.pos - m[2].length, options: mk(opts) };
   }
   m = before.match(/decorations\s*=\s*\[[^\]]*"([\w-]*)$/);

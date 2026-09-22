@@ -85,13 +85,16 @@
   const sections = $derived([
     {
       title: "Person shapes",
-      entries: personShapes.names().map((n) => ({
-        name: n,
-        swatch: shapeSwatch(n),
-        snippet: `sex = "${n}"`,
-        canApply: selectedEl?.kind === "person",
-        apply: () => dispatchEdits(setField(editorText(), app.map!, selectedEl!.id, "sex", n)),
-      })),
+      entries: personShapes.names().map((n) => {
+        const field = ["M", "F", "U"].includes(n) ? "sex" : "shape";
+        return {
+          name: n,
+          swatch: shapeSwatch(n),
+          snippet: `${field} = "${n}"`,
+          canApply: selectedEl?.kind === "person",
+          apply: () => dispatchEdits(setField(editorText(), app.map!, selectedEl!.id, field, n)),
+        };
+      }),
     },
     {
       title: "Decorations",

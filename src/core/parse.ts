@@ -124,6 +124,7 @@ export function parseGenogram(text: string): ParseResult {
           color: take(raw, fields, "color", asStr, "a color string"),
           fill: take(raw, fields, "fill", asStr, "a color string"),
           badge: take(raw, fields, "badge", asStr, "a color string"),
+          shape: take(raw, fields, "shape", asStr, "a shape name"),
         };
         doc.people.set(id, p);
       } else if (kind === "unions") {

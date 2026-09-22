@@ -98,14 +98,19 @@ export function buildScene(doc: GenoDocument): SceneGraph {
   const notes: SceneElement[] = [];
   const s = PERSON_SIZE;
 
+  const shapeFor = (p: Person) => personShapes.get(p.shape ?? p.sex) ?? personShapes.get(p.sex) ?? personShapes.get("U")!;
+  const topOf = (p: Person): number => personPos(doc, p.id).y + shapeFor(p).bounds(s).y;
   const absBox = (id: string): Box => {
-    const p = personPos(doc, id);
-    return { x: p.x - s / 2, y: p.y - s / 2, w: s, h: s };
+    const person = doc.people.get(id)!;
+    const b = shapeFor(person).bounds(s);
+    const pos = personPos(doc, id);
+    return { x: pos.x + b.x, y: pos.y + b.y, w: b.w, h: b.h };
   };
 
   for (const p of doc.people.values()) {
     const pos = personPos(doc, p.id);
-    const shape = personShapes.get(p.sex) ?? personShapes.get("U")!;
+    if (p.shape && !personShapes.get(p.shape)) warn(`unknown shape \`${p.shape}\` on \`${p.id}\``);
+    const shape = shapeFor(p);
     const box = shape.bounds(s);
     const under: VNode[] = [];
     const over: VNode[] = [];
@@ -123,12 +128,12 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       // name badge: rounded pill under the shape, drawn over any lines passing beneath
       const bw = Math.max(26, p.name.length * 6.8 + 14);
       texts.push(
-        h("rect", { x: -bw / 2, y: s / 2 + 6, width: bw, height: 17, rx: 8.5, fill: p.badge ?? "white", stroke: p.color ?? "#bbb", "stroke-width": 1 }),
-        label(0, s / 2 + 18.5, p.name),
+        h("rect", { x: -bw / 2, y: box.y + box.h + 6, width: bw, height: 17, rx: 8.5, fill: p.badge ?? "white", stroke: p.color ?? "#bbb", "stroke-width": 1 }),
+        label(0, box.y + box.h + 18.5, p.name),
       );
     }
     const yrs = yearsLabel(p);
-    if (yrs) texts.push(haloLabel(0, -s / 2 - 8, yrs));
+    if (yrs) texts.push(haloLabel(0, box.y - 8, yrs));
     persons.push({
       id: p.id,
       kind: "person",
@@ -214,25 +219,25 @@ export function buildScene(doc: GenoDocument): SceneGraph {
     const stem: Point = g ? { x: g.midX, y: g.busY } : { x: par!.x, y: par!.y + s / 2 };
 
     if (kids.length >= 3) {
-      const kidPts = kids.map((k) => personPos(doc, k.id));
-      const sibY = Math.min(...kidPts.map((q) => q.y - s / 2)) - 30;
-      const minX = Math.min(...kidPts.map((q) => q.x), stem.x);
-      const maxX = Math.max(...kidPts.map((q) => q.x), stem.x);
+      const kidInfo = kids.map((k) => ({ x: personPos(doc, k.id).x, top: topOf(k) }));
+      const sibY = Math.min(...kidInfo.map((q) => q.top)) - 30;
+      const minX = Math.min(...kidInfo.map((q) => q.x), stem.x);
+      const maxX = Math.max(...kidInfo.map((q) => q.x), stem.x);
       const vnodes = [
         polyline([stem, { x: stem.x, y: sibY }]),
         polyline([
           { x: minX, y: sibY },
           { x: maxX, y: sibY },
         ]),
-        ...kidPts.map((q) => polyline([{ x: q.x, y: sibY }, { x: q.x, y: q.y - s / 2 }])),
+        ...kidInfo.map((q) => polyline([{ x: q.x, y: sibY }, { x: q.x, y: q.top }])),
       ];
-      lines.push(pathElement(`childlink-${ref}`, vnodes, [stem, { x: minX, y: sibY }, { x: maxX, y: sibY }, ...kidPts.map((q) => ({ x: q.x, y: q.y - s / 2 }))]));
+      lines.push(pathElement(`childlink-${ref}`, vnodes, [stem, { x: minX, y: sibY }, { x: maxX, y: sibY }, ...kidInfo.map((q) => ({ x: q.x, y: q.top }))]));
       continue;
     }
 
     for (const p of kids) {
       const child = personPos(doc, p.id);
-      const childTop = child.y - s / 2;
+      const childTop = topOf(p);
       let path: Point[];
       if (g && g.sameRow && child.x >= g.l.x + s / 2 + 6 && child.x <= g.r.x - s / 2 - 6) {
         path = [

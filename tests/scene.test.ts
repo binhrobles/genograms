@@ -72,6 +72,25 @@ describe("buildScene", () => {
     expect(flat).toContain('"points":"-40,100 -40,130"');
   });
 
+  it("renders a miscarriage as a small dot with the drop line reaching it", () => {
+    const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]
+[people.m1]\nshape = "miscarriage"\nparents = "u"
+[layout]\na = [0,0]\nb = [200,0]\nm1 = [100,150]`;
+    const s = scene(t);
+    const m1 = s.elements.find((e) => e.id === "m1")!;
+    expect(m1.bounds.w).toBeLessThan(20); // small dot bounds, not the full person box
+    const link = s.elements.find((e) => e.id === "childlink-m1")!;
+    // drop ends at the dot's top (150 - 6.4), not the default person top (130)
+    expect(JSON.stringify(link.vnodes)).toContain("100,143.6");
+  });
+
+  it("warns on unknown shape and falls back to the sex shape", () => {
+    const t = `[people.a]\nsex = "F"\nshape = "wat"\n[layout]\na = [0,0]`;
+    const s = scene(t);
+    expect(s.diagnostics.map((d) => d.message).join()).toMatch(/unknown shape/);
+    expect(JSON.stringify(s.elements.find((e) => e.id === "a")!.vnodes)).toContain('"circle"');
+  });
+
   it("keeps individual drops for 1–2 children", () => {
     const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]
 [people.c1]\nparents = "u"\n[people.c2]\nparents = "u"

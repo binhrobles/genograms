@@ -18,8 +18,10 @@ describe("Registry", () => {
 });
 
 describe("person shapes", () => {
-  it("has M, F, U with origin-centered bounds", () => {
-    expect(personShapes.names().sort()).toEqual(["F", "M", "U"]);
+  it("has M, F, U plus reproductive-event shapes", () => {
+    expect(personShapes.names().sort()).toEqual(["F", "M", "U", "abortion", "miscarriage", "pregnancy"]);
+    // reproductive events render smaller than the person box
+    expect(personShapes.get("miscarriage")!.bounds(40).w).toBeLessThan(20);
     for (const n of ["M", "F", "U"]) {
       const b = personShapes.get(n)!.bounds(40);
       expect(b).toEqual({ x: -20, y: -20, w: 40, h: 40 });

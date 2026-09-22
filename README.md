@@ -30,6 +30,10 @@ decorations = ["alcoholism"]        # combinable, extensible; built-ins:
                        #   in-recovery (bottom-half hatch), mental-illness (left half),
                        #   physical-illness (right half), deceased, index
 parents = "mom-dad"    # union id, or a person id for single-parent
+shape = "miscarriage"  # optional shape override: miscarriage (dot) | pregnancy
+                       # (triangle) | abortion (small ✗) — hang off a union via
+                       # `parents` like any child; use `birth` for the date.
+                       # Stillbirth: keep the sex shape + "deceased" decoration.
 color = "#7a5195"      # optional: shape stroke, decoration ink, badge border
 fill = "#f3e8fa"       # optional: shape interior
 badge = "#e9d7f5"      # optional: name badge background
