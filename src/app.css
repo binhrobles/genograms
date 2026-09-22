@@ -1,0 +1,4 @@
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; }
+body { font-family: system-ui, sans-serif; font-size: 14px; color: #1a1a1a; }
+button { font: inherit; cursor: pointer; }
