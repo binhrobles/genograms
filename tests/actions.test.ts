@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseGenogram } from "../src/core/parse";
 import { applyEdits } from "../src/core/surgeon";
-import { addParent, type Ctx } from "../src/ui/actions";
+import { addParent, addNote, type Ctx } from "../src/ui/actions";
 import "../src/core/registry/builtins";
 
 const ctx = (text: string): Ctx => {
@@ -53,6 +53,16 @@ describe("addParent", () => {
     expect(step2.indexOf("[people.dad]")).toBeGreaterThan(step2.indexOf("[people.mom]"));
     expect(step2.indexOf("[unions.mom-dad]")).toBeGreaterThan(step2.indexOf("[people.dad]"));
     expect(step2.indexOf("[unions.mom-dad]")).toBeLessThan(step2.indexOf("[layout]"));
+  });
+
+  it("addNote writes text as a TOML multiline string", () => {
+    const c = ctx(ORPHAN);
+    const out = applyEdits(c.text, addNote(c, "kid", "lives in NYC").edits);
+    expect(out).toContain('text = """\nlives in NYC\n"""');
+    const r = parseGenogram(out);
+    expect(r.ok).toBe(true);
+    // trailing newline from the """ block doesn't produce a phantom rendered line
+    expect(r.doc!.annotations.get("note-kid")!.text).toBe("lives in NYC\n");
   });
 
   it("returns null when both parents already exist", () => {

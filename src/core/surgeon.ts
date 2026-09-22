@@ -7,9 +7,18 @@ export interface TextEdit {
   insert: string;
 }
 
-export type TomlValue = string | number | boolean | Array<string | number>;
+/** Wrap a string to serialize it as a TOML multiline basic string ("""..."""). */
+export class Multiline {
+  constructor(public readonly value: string) {}
+}
+
+export type TomlValue = string | number | boolean | Array<string | number> | Multiline;
 
 export function serializeValue(v: TomlValue): string {
+  if (v instanceof Multiline) {
+    const body = v.value.replace(/\\/g, "\\\\").replace(/"""/g, '""\\"');
+    return `"""\n${body}\n"""`;
+  }
   if (Array.isArray(v)) return `[${v.map((x) => serializeValue(x)).join(", ")}]`;
   if (typeof v === "string") return JSON.stringify(v); // JSON escaping is valid for TOML basic strings
   return String(v);

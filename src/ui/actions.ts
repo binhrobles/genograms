@@ -1,6 +1,6 @@
 import type { GenoDocument } from "../core/model";
 import type { SourceMap } from "../core/parse";
-import { addTable, setField, removeField, appendToArray, setLayoutEntry, type TextEdit, type TomlValue } from "../core/surgeon";
+import { addTable, setField, removeField, appendToArray, setLayoutEntry, Multiline, type TextEdit, type TomlValue } from "../core/surgeon";
 import { placePartner, placeChild, placeSibling, placeParent } from "../core/placement";
 
 export interface Ctx {
@@ -121,7 +121,7 @@ export function addNote(ctx: Ctx, personId: string, text: string): { edits: Text
   return {
     newId: id,
     edits: [
-      ...addTable(ctx.text, ctx.map, "annotations", id, { text, attach: personId }, { after: personId }),
+      ...addTable(ctx.text, ctx.map, "annotations", id, { text: new Multiline(text), attach: personId }, { after: personId }),
       ...setLayoutEntry(ctx.text, ctx.map, id, [-24, 48]),
     ],
   };

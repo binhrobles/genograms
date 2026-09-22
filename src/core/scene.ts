@@ -354,7 +354,7 @@ export function buildScene(doc: GenoDocument, opts: SceneOptions = {}): SceneGra
     const attached = a.attach != null && doc.people.has(a.attach);
     const base = attached ? personPos(doc, a.attach!) : { x: 0, y: 0 };
     const pos = attached ? { x: base.x + raw[0], y: base.y + raw[1] } : { x: raw[0], y: raw[1] };
-    const textLines = a.text.split("\n");
+    const textLines = a.text.replace(/\n+$/, "").split("\n"); // multiline """ blocks end with a newline
     notes.push({
       id: a.id,
       kind: "annotation",
