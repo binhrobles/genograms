@@ -15,6 +15,9 @@ export interface ElementLoc {
   table: [number, number]; // full table: header through last key-value
   header: [number, number]; // the `kind.id` key inside the brackets
   fields: Map<string, FieldLoc>;
+  /** True for compact `[emotional] edges = [...]` entries: `table`/`header` cover just
+   *  the one array item; field-level surgeon ops are no-ops on these. */
+  inline?: boolean;
 }
 
 export interface LayoutLoc {
@@ -35,6 +38,22 @@ export interface ParseResult {
 }
 
 const KINDS: ElementKind[] = ["people", "unions", "emotional", "annotations"];
+
+/** Split a lifespan like "~1934-2025", "1962–1962", or "193?-2000" into birth/death.
+ *  Full dates ("1934-05-12") are left intact as a birth value. */
+export function parseLife(s: string): { birth?: string; death?: string } {
+  const yearish = /^[~c.\s]*\d{3,4}\??$/;
+  const parts = s.split(/[–—]/); // en/em dash always splits
+  if (parts.length === 1) {
+    const hy = s.split("-");
+    if (hy.length === 2 && yearish.test(hy[0].trim()) && yearish.test(hy[1].trim())) {
+      return { birth: hy[0].trim(), death: hy[1].trim() };
+    }
+    return { birth: s.trim() };
+  }
+  const [b, d] = [parts[0].trim(), parts[1].trim()];
+  return { birth: b || undefined, death: d || undefined };
+}
 
 type Raw = Record<string, unknown>;
 const asStr = (v: unknown) => (typeof v === "string" ? v : undefined);
@@ -111,12 +130,14 @@ export function parseGenogram(text: string): ParseResult {
       if (map.elements.has(id)) err(`duplicate id \`${id}\``, headerRange);
       map.elements.set(id, { kind, table: tableRange, header: headerRange, fields });
       if (kind === "people") {
+        const life = take(raw, fields, "life", asStr, 'a lifespan string like "~1934-2025"');
+        const span = life ? parseLife(life) : {};
         const p: Person = {
           id,
           name: take(raw, fields, "name", asStr, "a string"),
           sex: take(raw, fields, "sex", (v) => (v === "M" || v === "F" || v === "U" ? (v as Sex) : undefined), '"M", "F", or "U"') ?? "U",
-          birth: take(raw, fields, "birth", asStrOrNum, "a number or string"),
-          death: take(raw, fields, "death", asStrOrNum, "a number or string"),
+          birth: take(raw, fields, "birth", asStrOrNum, "a number or string") ?? span.birth,
+          death: take(raw, fields, "death", asStrOrNum, "a number or string") ?? span.death,
           index: take(raw, fields, "index", (v) => (typeof v === "boolean" ? v : undefined), "a boolean") ?? false,
           decorations: take(raw, fields, "decorations", strArray, "an array of strings") ?? [],
           notes: take(raw, fields, "notes", asStr, "a string"),
@@ -138,6 +159,7 @@ export function parseGenogram(text: string): ParseResult {
           year: take(raw, fields, "year", asStrOrNum, "a number or string"),
           decorations: take(raw, fields, "decorations", strArray, "an array of strings") ?? [],
           color: take(raw, fields, "color", asStr, "a color string"),
+          children: take(raw, fields, "children", strArray, "an array of person ids"),
         };
         doc.unions.set(id, u);
       } else if (kind === "emotional") {
@@ -157,10 +179,44 @@ export function parseGenogram(text: string): ParseResult {
         };
         doc.annotations.set(id, a);
       }
+    } else if (path[0] === "emotional" && path.length === 1) {
+      // compact edge list: [emotional] edges = ["from kind to", ...]
+      for (const kv of node.body) {
+        if (kv.type !== "TOMLKeyValue" || keyName(kv) !== "edges") continue;
+        const arr = kv.value as AST.TOMLArray;
+        const items = (arr.type === "TOMLArray" ? arr.elements : []) as Array<{ type: string; value?: unknown; range: [number, number] }>;
+        for (const item of items) {
+          const txt = typeof item.value === "string" ? item.value : null;
+          const itemRange: [number, number] = [...item.range];
+          if (txt === null) {
+            warn(`edges entries must be strings like "from kind to"`, itemRange);
+            continue;
+          }
+          const tokens = txt.trim().split(/\s+/);
+          if (tokens.length !== 3) {
+            warn(`edge \`${txt}\` must be exactly "from kind to"`, itemRange);
+            continue;
+          }
+          const [from, kindName, to] = tokens;
+          let id = `${from}-${kindName}-${to}`;
+          let i = 2;
+          while (map.elements.has(id)) id = `${from}-${kindName}-${to}-${i++}`;
+          doc.emotional.set(id, { id, between: [from, to], kind: kindName });
+          map.elements.set(id, { kind: "emotional", table: itemRange, header: itemRange, fields: new Map(), inline: true });
+        }
+      }
     } else {
       warn(`unknown table [${path.join(".")}]`, headerRange);
     }
   }
+
+  // union `children` shorthand resolves onto each child's `parents` (explicit parents win;
+  // conflicts are flagged by the validator)
+  for (const u of doc.unions.values())
+    for (const cid of u.children ?? []) {
+      const c = doc.people.get(cid);
+      if (c && !c.parents) c.parents = u.id;
+    }
 
   diagnostics.push(...validate(doc, map));
   return { ok: true, doc, map, diagnostics };

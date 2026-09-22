@@ -26,6 +26,7 @@ export interface Union {
   year?: number | string;
   decorations: string[];
   color?: string; // overrides the line color
+  children?: string[]; // shorthand: sets each listed person's `parents` to this union
 }
 
 export interface EmotionalLink {

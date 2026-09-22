@@ -24,6 +24,8 @@ name = "Ada"
 sex = "F"              # "M" square | "F" circle | "U" diamond
 birth = 1990           # numbers or strings: "~1930", "192?", "c. 1930", "1990-03-02"
 death = 2085           # presence adds the deceased ✗; strings render verbatim
+life = "~1934-2025"    # shorthand for birth + death (explicit fields win);
+                       # full dates like "1990-05-12" are kept as a birth value
 index = true           # double border (the "self" of the genogram)
 decorations = ["alcoholism"]        # combinable, extensible; built-ins:
                        #   alcoholism / substance-abuse (bottom-half fill),
@@ -50,12 +52,19 @@ status = "divorced"    # married | divorced | separated | cohabiting | dating
                        # | affair | engagement | one-night-stand | widowed (✗ at mid)
 year = 1988
 color = "#7a5195"      # optional: line color
+children = ["ada"]     # shorthand: sets each listed person's `parents` to this
+                       # union (per-child `parents` still works, and wins)
 # The union line connects partners side-to-side (elbowing if they sit at
 # different heights). 1–2 children drop straight from it; 3+ children share
 # a single stem plus a sibling bus. "Married but cut off" is a union PLUS an
 # emotional link between the same pair — the emotional line automatically
 # renders offset above the union line, keeping the space below for children.
 
+# compact form — one line per link ("from kind to"; from acts on to):
+[emotional]
+edges = ["ada close mom", "dad distrust mom"]
+
+# table form — when a link needs color etc.:
 [emotional.ada-mom]
 between = ["ada", "mom"]
 kind = "close"         # close | fused | conflict | fused-conflict | cutoff | distant

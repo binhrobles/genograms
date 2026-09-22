@@ -47,6 +47,56 @@ describe("parseGenogram", () => {
     expect(r.diagnostics[0].severity).toBe("error");
   });
 
+  it("union children shorthand resolves onto each child's parents", () => {
+    const t = `[people.mom]\n[people.dad]\n[people.kid1]\n[people.kid2]
+[unions.u]\npartners = ["mom", "dad"]\nchildren = ["kid1", "kid2"]
+[layout]\nmom=[0,0]\ndad=[160,0]\nkid1=[40,150]\nkid2=[120,150]`;
+    const r = parseGenogram(t);
+    expect(r.doc!.people.get("kid1")!.parents).toBe("u");
+    expect(r.doc!.people.get("kid2")!.parents).toBe("u");
+    expect(r.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  });
+
+  it("flags conflicting children claims", () => {
+    const t = `[people.a]\n[people.b]\n[people.kid]\nparents = "a"
+[unions.u]\npartners = ["a", "b"]\nchildren = ["kid", "ghost"]
+[layout]\na=[0,0]\nb=[160,0]\nkid=[80,150]`;
+    const msgs = parseGenogram(t).diagnostics.map((d) => `${d.severity}:${d.message}`).join("\n");
+    expect(msgs).toMatch(/error:.*already has parents/);
+    expect(msgs).toMatch(/error:.*unknown child.*ghost/);
+  });
+
+  it("life ranges derive birth and death; explicit fields win; full dates stay intact", () => {
+    const t = `[people.a]\nlife = "~1934-2025"
+[people.b]\nlife = "1962–1962"
+[people.c]\nlife = "1990-05-12"
+[people.d]\nlife = "1940-2000"\nbirth = 1941
+[layout]\na=[0,0]\nb=[100,0]\nc=[200,0]\nd=[300,0]`;
+    const doc = parseGenogram(t).doc!;
+    expect(doc.people.get("a")).toMatchObject({ birth: "~1934", death: "2025" });
+    expect(doc.people.get("b")).toMatchObject({ birth: "1962", death: "1962" });
+    expect(doc.people.get("c")!.birth).toBe("1990-05-12");
+    expect(doc.people.get("c")!.death).toBeUndefined();
+    expect(doc.people.get("d")!.birth).toBe(1941); // explicit beats derived
+    expect(doc.people.get("d")!.death).toBe("2000");
+  });
+
+  it("parses compact emotional edges with per-item source ranges", () => {
+    const t = `[people.a]\n[people.b]\n[people.c]
+[emotional]
+edges = ["a abuse b", "b close c", "broken edge"]
+[layout]\na=[0,0]\nb=[100,0]\nc=[200,0]`;
+    const r = parseGenogram(t);
+    const e1 = r.doc!.emotional.get("a-abuse-b")!;
+    expect(e1).toMatchObject({ between: ["a", "b"], kind: "abuse" });
+    expect(r.doc!.emotional.get("b-close-c")).toBeDefined();
+    expect(r.doc!.emotional.size).toBe(2); // the malformed one is skipped
+    expect(r.diagnostics.map((d) => d.message).join()).toMatch(/must be exactly/);
+    const loc = r.map!.elements.get("a-abuse-b")!;
+    expect(loc.inline).toBe(true);
+    expect(t.slice(...loc.table)).toBe('"a abuse b"');
+  });
+
   it("flags wrong field types", () => {
     const r = parseGenogram(`[people.x]\nname = 5\ndecorations = "nope"\n[layout]\nx = [0,0]\n`);
     expect(r.ok).toBe(true);

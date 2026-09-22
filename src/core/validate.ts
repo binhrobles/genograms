@@ -29,6 +29,11 @@ export function validate(doc: GenoDocument, map: SourceMap): Diagnostic[] {
     if (u.partners.length !== 2) err(`union \`${u.id}\` must have exactly 2 partners`, loc(u.id, "partners"));
     else if (u.partners[0] === u.partners[1]) err(`union \`${u.id}\` partners must be distinct`, loc(u.id, "partners"));
     for (const p of u.partners) if (!doc.people.has(p)) err(`union \`${u.id}\` references unknown person \`${p}\``, loc(u.id, "partners"));
+    for (const cid of u.children ?? []) {
+      const c = doc.people.get(cid);
+      if (!c) err(`union \`${u.id}\` lists unknown child \`${cid}\``, loc(u.id, "children"));
+      else if (c.parents !== u.id) err(`child \`${cid}\` of union \`${u.id}\` already has parents \`${c.parents}\``, loc(u.id, "children"));
+    }
   }
   for (const e of doc.emotional.values()) {
     if (e.between.length !== 2) err(`emotional \`${e.id}\` must connect exactly 2 people`, loc(e.id, "between"));

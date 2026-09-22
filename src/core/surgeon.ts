@@ -51,22 +51,40 @@ export function setLayoutEntry(text: string, map: SourceMap, id: string, pos: [n
 
 export function setField(text: string, map: SourceMap, id: string, key: string, value: TomlValue): TextEdit[] {
   const el = map.elements.get(id);
-  if (!el) return [];
+  if (!el || el.inline) return []; // inline edge entries have no fields to edit
   const f = el.fields.get(key);
   if (f) return [{ from: f.value[0], to: f.value[1], insert: serializeValue(value) }];
   return [{ from: el.table[1], to: el.table[1], insert: `\n${key} = ${serializeValue(value)}` }];
 }
 
 export function removeField(text: string, map: SourceMap, id: string, key: string): TextEdit[] {
-  const f = map.elements.get(id)?.fields.get(key);
+  const el = map.elements.get(id);
+  if (!el || el.inline) return [];
+  const f = el.fields.get(key);
   if (!f) return [];
   const [from, to] = lineRange(text, f.kv);
   return [{ from, to, insert: "" }];
 }
 
+/** Delete one item of an inline array, eating an adjacent comma. */
+function removeArrayItem(text: string, [from, to]: [number, number]): TextEdit {
+  let end = to;
+  let i = end;
+  while (text[i] === " ") i++;
+  if (text[i] === ",") {
+    end = i + 1;
+    while (text[end] === " ") end++;
+  } else {
+    let j = from - 1;
+    while (j >= 0 && (text[j] === " " || text[j] === "\n")) j--;
+    if (text[j] === ",") from = j;
+  }
+  return { from, to: end, insert: "" };
+}
+
 export function appendToArray(text: string, map: SourceMap, id: string, key: string, item: string | number): TextEdit[] {
   const el = map.elements.get(id);
-  if (!el) return [];
+  if (!el || el.inline) return [];
   const f = el.fields.get(key);
   if (!f) return setField(text, map, id, key, [item]);
   const inner = text.slice(f.value[0] + 1, f.value[1] - 1).trim();
@@ -118,8 +136,12 @@ export function removeElement(text: string, map: SourceMap, doc: GenoDocument, i
   const removeTable = (eid: string) => {
     const loc = map.elements.get(eid);
     if (loc) {
-      const [from, to] = lineRange(text, loc.table);
-      edits.push({ from, to, insert: "" });
+      if (loc.inline) {
+        edits.push(removeArrayItem(text, loc.table)); // splice just this edge out of the array
+      } else {
+        const [from, to] = lineRange(text, loc.table);
+        edits.push({ from, to, insert: "" });
+      }
     }
     const lay = map.layout?.entries.get(eid);
     if (lay) {
@@ -163,7 +185,16 @@ export function renameId(text: string, map: SourceMap, doc: GenoDocument, oldId:
   if (el.kind === "people") {
     for (const u of doc.unions.values()) if (u.partners.includes(oldId)) edits.push(...setField(text, map, u.id, "partners", sub(u.partners)));
     for (const c of doc.people.values()) if (c.parents === oldId) edits.push(...setField(text, map, c.id, "parents", newId));
-    for (const e of doc.emotional.values()) if (e.between.includes(oldId)) edits.push(...setField(text, map, e.id, "between", sub(e.between)));
+    for (const e of doc.emotional.values())
+      if (e.between.includes(oldId)) {
+        const loc = map.elements.get(e.id);
+        if (loc?.inline) {
+          const [from, to] = sub(e.between);
+          edits.push({ from: loc.table[0], to: loc.table[1], insert: serializeValue(`${from} ${e.kind} ${to}`) });
+        } else {
+          edits.push(...setField(text, map, e.id, "between", sub(e.between)));
+        }
+      }
     for (const a of doc.annotations.values()) if (a.attach === oldId) edits.push(...setField(text, map, a.id, "attach", newId));
   } else if (el.kind === "unions") {
     for (const c of doc.people.values()) if (c.parents === oldId) edits.push(...setField(text, map, c.id, "parents", newId));

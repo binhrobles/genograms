@@ -118,6 +118,39 @@ describe("surgeon", () => {
     expect(r.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
   });
 
+  it("removes just one inline edge, and cascades person deletion into the edges array", () => {
+    const t = `[people.a]\n[people.b]\n[people.c]
+[emotional]
+edges = ["a abuse b", "b close c"]
+[layout]\na=[0,0]\nb=[100,0]\nc=[200,0]\n`;
+    const c1 = ctx(t);
+    // delete a single edge
+    let out = applyEdits(c1.text, removeElement(c1.text, c1.map, c1.doc, "a-abuse-b"));
+    let r = parseGenogram(out);
+    expect(r.ok).toBe(true);
+    expect(r.doc!.emotional.size).toBe(1);
+    expect(out).toContain('edges = ["b close c"]');
+    // deleting person c cascades into the array
+    const c2 = ctx(out);
+    out = applyEdits(c2.text, removeElement(c2.text, c2.map, c2.doc, "c"));
+    r = parseGenogram(out);
+    expect(r.ok).toBe(true);
+    expect(r.doc!.emotional.size).toBe(0);
+    expect(r.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  });
+
+  it("renameId rewrites inline edges", () => {
+    const t = `[people.a]\n[people.b]
+[emotional]
+edges = ["a close b"]
+[layout]\na=[0,0]\nb=[100,0]\n`;
+    const c = ctx(t);
+    const out = applyEdits(c.text, renameId(c.text, c.map, c.doc, "a", "alice"));
+    const r = parseGenogram(out);
+    expect(r.doc!.emotional.values().next().value!.between).toEqual(["alice", "b"]);
+    expect(r.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  });
+
   it("renameId updates header, layout key, and all references", () => {
     const c = ctx(FAMILY);
     const out = applyEdits(c.text, renameId(c.text, c.map, c.doc, "binh", "papa"));
