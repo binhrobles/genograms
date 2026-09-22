@@ -2,11 +2,11 @@
   import { app } from "./state.svelte";
   import { dispatchEdits, editorText } from "./editor";
   import { removeElements } from "../core/surgeon";
-  import { emotionalLines } from "../core/registry";
+  import { emotionalLines, unionLines } from "../core/registry";
   import { addPartner, addChild, addSibling, addParent, addNote, toggleDeceased, setIndex, type Ctx } from "./actions";
 
   let { pos }: { pos: { left: number; top: number } } = $props();
-  let showLinkKinds = $state(false);
+  let openMenu = $state<"union" | "emotion" | null>(null);
 
   const single = $derived(app.selection.length === 1 ? (app.scene?.elements.find((e) => e.id === app.selection[0]) ?? null) : null);
   const singlePerson = $derived(single?.kind === "person" ? single.id : null);
@@ -27,9 +27,9 @@
     app.selection = [];
   }
 
-  function startLink(kind: string) {
-    showLinkKinds = false;
-    if (singlePerson) app.linkPick = { kind, from: singlePerson };
+  function startLink(kind: string, union: boolean) {
+    openMenu = null;
+    if (singlePerson) app.linkPick = { kind, from: singlePerson, union };
   }
 </script>
 
@@ -48,11 +48,21 @@
       <button onclick={() => withName("Child's name?", addChild, singlePerson)}>+ child</button>
       <button onclick={() => withName("Sibling's name?", addSibling, singlePerson)} disabled={!app.doc?.people.get(singlePerson)?.parents} title="needs a parents ref">+ sibling</button>
       <span class="linkwrap">
-        <button onclick={() => (showLinkKinds = !showLinkKinds)}>+ link</button>
-        {#if showLinkKinds}
+        <button onclick={() => (openMenu = openMenu === "union" ? null : "union")} title="union with an existing person">+ union</button>
+        {#if openMenu === "union"}
+          <div class="menu">
+            {#each unionLines.names() as status (status)}
+              <button onclick={() => startLink(status, true)}>{status}</button>
+            {/each}
+          </div>
+        {/if}
+      </span>
+      <span class="linkwrap">
+        <button onclick={() => (openMenu = openMenu === "emotion" ? null : "emotion")} title="emotional link with an existing person">+ emotion</button>
+        {#if openMenu === "emotion"}
           <div class="menu">
             {#each emotionalLines.names() as kind (kind)}
-              <button onclick={() => startLink(kind)}>{kind}</button>
+              <button onclick={() => startLink(kind, false)}>{kind}</button>
             {/each}
           </div>
         {/if}

@@ -5,7 +5,7 @@
   import { dispatchEdits, selectElementInEditor, editorText } from "./editor";
   import { setLayoutEntry, type TextEdit } from "../core/surgeon";
   import { boxesIntersect, type Box } from "../core/geom";
-  import { addEmotional } from "./actions";
+  import { addEmotional, addUnion } from "./actions";
   import type { SceneElement } from "../core/scene";
   import ActionBar from "./ActionBar.svelte";
 
@@ -81,10 +81,11 @@
     }
     if (e.button !== 0) return;
     if (app.linkPick && el.kind === "person") {
-      const { from, kind } = app.linkPick;
+      const { from, kind, union } = app.linkPick;
       app.linkPick = null;
       if (el.id !== from && app.doc && app.map) {
-        const r = addEmotional({ doc: app.doc, map: app.map, text: editorText() }, from, el.id, kind);
+        const make = union ? addUnion : addEmotional;
+        const r = make({ doc: app.doc, map: app.map, text: editorText() }, from, el.id, kind);
         dispatchEdits(r.edits, { select: r.newId });
       }
       return;
@@ -234,7 +235,9 @@
     <div class="badge stale">TOML has errors — canvas shows the last good parse</div>
   {/if}
   {#if app.linkPick}
-    <div class="badge pick">Click another person to add a “{app.linkPick.kind}” link (Esc to cancel)</div>
+    <div class="badge pick">
+      Click another person to add a “{app.linkPick.kind}” {app.linkPick.union ? "union" : "emotional link"} (Esc to cancel)
+    </div>
   {/if}
   {#if barPos && !app.stale}
     <ActionBar pos={barPos} />

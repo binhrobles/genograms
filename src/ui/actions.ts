@@ -105,6 +105,12 @@ export function addParent(ctx: Ctx, personId: string, name: string): { edits: Te
   };
 }
 
+/** Union between two EXISTING people (addPartner covers new ones). */
+export function addUnion(ctx: Ctx, from: string, to: string, status: string): { edits: TextEdit[]; newId: string } {
+  const id = slugify(`${from} ${to}`, ctx.doc);
+  return { newId: id, edits: addTable(ctx.text, ctx.map, "unions", id, { partners: [from, to], status }, { after: from }) };
+}
+
 export function addEmotional(ctx: Ctx, from: string, to: string, kind: string): { edits: TextEdit[]; newId: string } {
   const id = slugify(`${from} ${to}`, ctx.doc);
   return { newId: id, edits: addTable(ctx.text, ctx.map, "emotional", id, { between: [from, to], kind }, { after: from }) };

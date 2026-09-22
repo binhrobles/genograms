@@ -77,7 +77,7 @@ class AppState {
   diagnostics = $state.raw<Diagnostic[]>([]);
   selection = $state.raw<string[]>([]);
   highlightedId = $state<string | null>(null);
-  linkPick = $state.raw<{ kind: string; from: string } | null>(null);
+  linkPick = $state.raw<{ kind: string; from: string; union: boolean } | null>(null);
   editorCollapsed = $state(false);
   canvasCollapsed = $state(false);
   libraryOpen = $state(false);
