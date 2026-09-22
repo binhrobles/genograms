@@ -3,7 +3,7 @@
   import { dispatchEdits, editorText } from "./editor";
   import { removeElements } from "../core/surgeon";
   import { emotionalLines } from "../core/registry";
-  import { addPartner, addChild, addSibling, addNote, toggleDeceased, setIndex, type Ctx } from "./actions";
+  import { addPartner, addChild, addSibling, addParent, addNote, toggleDeceased, setIndex, type Ctx } from "./actions";
 
   let { pos }: { pos: { left: number; top: number } } = $props();
   let showLinkKinds = $state(false);
@@ -36,6 +36,14 @@
 {#if ready && app.selection.length > 0}
   <div class="bar" style="left: {pos.left}px; top: {pos.top}px">
     {#if singlePerson}
+      {@const parentsRef = app.doc?.people.get(singlePerson)?.parents}
+      <button
+        onclick={() => withName("Parent's name?", addParent, singlePerson)}
+        disabled={!!parentsRef && !!app.doc?.unions.has(parentsRef)}
+        title="adds one parent; again for the second"
+      >
+        + parent
+      </button>
       <button onclick={() => withName("Partner's name?", addPartner, singlePerson)}>+ partner</button>
       <button onclick={() => withName("Child's name?", addChild, singlePerson)}>+ child</button>
       <button onclick={() => withName("Sibling's name?", addSibling, singlePerson)} disabled={!app.doc?.people.get(singlePerson)?.parents} title="needs a parents ref">+ sibling</button>

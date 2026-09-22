@@ -74,10 +74,23 @@ export function appendToArray(text: string, map: SourceMap, id: string, key: str
   return [{ from: f.value[1] - 1, to: f.value[1] - 1, insert }];
 }
 
-/** New tables go just above [layout] (keeping layout last), or at end of file. */
-export function addTable(text: string, map: SourceMap | null, kind: ElementKind, id: string, fields: Record<string, TomlValue>): TextEdit[] {
+/** New tables go right below the `after` anchor element when given (keeping related
+ *  definitions together), else just above [layout], else at end of file. */
+export function addTable(
+  text: string,
+  map: SourceMap | null,
+  kind: ElementKind,
+  id: string,
+  fields: Record<string, TomlValue>,
+  opts?: { after?: string },
+): TextEdit[] {
   let body = `[${kind}.${id}]\n`;
   for (const [k, v] of Object.entries(fields)) body += `${k} = ${serializeValue(v)}\n`;
+  const anchor = opts?.after ? map?.elements.get(opts.after) : undefined;
+  if (anchor) {
+    const at = lineEndIncl(text, anchor.table[1]);
+    return [{ from: at, to: at, insert: `\n${body}` }];
+  }
   if (map?.layout) {
     const at = lineStart(text, map.layout.table[0]);
     return [{ from: at, to: at, insert: body + "\n" }];

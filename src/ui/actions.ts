@@ -1,7 +1,7 @@
 import type { GenoDocument } from "../core/model";
 import type { SourceMap } from "../core/parse";
 import { addTable, setField, removeField, appendToArray, setLayoutEntry, type TextEdit, type TomlValue } from "../core/surgeon";
-import { placePartner, placeChild, placeSibling } from "../core/placement";
+import { placePartner, placeChild, placeSibling, placeParent } from "../core/placement";
 
 export interface Ctx {
   doc: GenoDocument;
@@ -32,8 +32,8 @@ export function addPartner(ctx: Ctx, personId: string, name: string): { edits: T
   return {
     newId: pid,
     edits: [
-      ...addTable(ctx.text, ctx.map, "people", pid, { name, sex }),
-      ...addTable(ctx.text, ctx.map, "unions", unionId, { partners: [personId, pid], status: "married" }),
+      ...addTable(ctx.text, ctx.map, "people", pid, { name, sex }, { after: personId }),
+      ...addTable(ctx.text, ctx.map, "unions", unionId, { partners: [personId, pid], status: "married" }, { after: personId }),
       ...setLayoutEntry(ctx.text, ctx.map, pid, pos),
     ],
   };
@@ -50,7 +50,10 @@ export function addChild(ctx: Ctx, parentId: string, name: string): { edits: Tex
   const pos = placeChild(ctx.doc, parentRef);
   return {
     newId: id,
-    edits: [...addTable(ctx.text, ctx.map, "people", id, { name, parents: parentRef }), ...setLayoutEntry(ctx.text, ctx.map, id, pos)],
+    edits: [
+      ...addTable(ctx.text, ctx.map, "people", id, { name, parents: parentRef }, { after: parentRef }),
+      ...setLayoutEntry(ctx.text, ctx.map, id, pos),
+    ],
   };
 }
 
@@ -61,20 +64,60 @@ export function addSibling(ctx: Ctx, personId: string, name: string): { edits: T
   const pos = placeSibling(ctx.doc, personId);
   return {
     newId: id,
-    edits: [...addTable(ctx.text, ctx.map, "people", id, { name, parents: person.parents }), ...setLayoutEntry(ctx.text, ctx.map, id, pos)],
+    edits: [
+      ...addTable(ctx.text, ctx.map, "people", id, { name, parents: person.parents }, { after: personId }),
+      ...setLayoutEntry(ctx.text, ctx.map, id, pos),
+    ],
+  };
+}
+
+/** First call creates a single parent north of the child; second call creates the other
+ *  parent beside the first and upgrades the child's `parents` ref to their new union.
+ *  Returns null when both parents already exist (the ref is a union). */
+export function addParent(ctx: Ctx, personId: string, name: string): { edits: TextEdit[]; newId: string } | null {
+  const child = ctx.doc.people.get(personId);
+  if (!child) return null;
+  const ref = child.parents;
+  if (ref && ctx.doc.unions.has(ref)) return null;
+  const pid = slugify(name, ctx.doc);
+  const pos = placeParent(ctx.doc, personId);
+  if (ref && ctx.doc.people.has(ref)) {
+    const first = ctx.doc.people.get(ref);
+    const sex: TomlValue = first?.sex === "M" ? "F" : first?.sex === "F" ? "M" : "U";
+    const unionId = slugify(`${ref} ${pid}`, ctx.doc);
+    return {
+      newId: pid,
+      edits: [
+        ...addTable(ctx.text, ctx.map, "people", pid, { name, sex }, { after: ref }),
+        ...addTable(ctx.text, ctx.map, "unions", unionId, { partners: [ref, pid], status: "married" }, { after: ref }),
+        ...setField(ctx.text, ctx.map, personId, "parents", unionId),
+        ...setLayoutEntry(ctx.text, ctx.map, pid, pos),
+      ],
+    };
+  }
+  return {
+    newId: pid,
+    edits: [
+      ...addTable(ctx.text, ctx.map, "people", pid, { name }, { after: personId }),
+      ...setField(ctx.text, ctx.map, personId, "parents", pid),
+      ...setLayoutEntry(ctx.text, ctx.map, pid, pos),
+    ],
   };
 }
 
 export function addEmotional(ctx: Ctx, from: string, to: string, kind: string): { edits: TextEdit[]; newId: string } {
   const id = slugify(`${from} ${to}`, ctx.doc);
-  return { newId: id, edits: addTable(ctx.text, ctx.map, "emotional", id, { between: [from, to], kind }) };
+  return { newId: id, edits: addTable(ctx.text, ctx.map, "emotional", id, { between: [from, to], kind }, { after: from }) };
 }
 
 export function addNote(ctx: Ctx, personId: string, text: string): { edits: TextEdit[]; newId: string } {
   const id = slugify(`note ${personId}`, ctx.doc);
   return {
     newId: id,
-    edits: [...addTable(ctx.text, ctx.map, "annotations", id, { text, attach: personId }), ...setLayoutEntry(ctx.text, ctx.map, id, [-24, 48])],
+    edits: [
+      ...addTable(ctx.text, ctx.map, "annotations", id, { text, attach: personId }, { after: personId }),
+      ...setLayoutEntry(ctx.text, ctx.map, id, [-24, 48]),
+    ],
   };
 }
 

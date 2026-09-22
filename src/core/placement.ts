@@ -61,6 +61,17 @@ export function placeChild(doc: GenoDocument, parentRef: string, birth?: number)
   return [sibs[sibs.length - 1].x + SIBLING_DX, y];
 }
 
+/** North of the child (first parent), or beside the existing single parent (second parent). */
+export function placeParent(doc: GenoDocument, personId: string): [number, number] {
+  const person = doc.people.get(personId);
+  const pos = personPos(doc, personId);
+  if (person?.parents && doc.people.has(person.parents)) return placePartner(doc, person.parents);
+  let x = pos.x;
+  const y = pos.y - CHILD_DY;
+  while (occupied(doc, x, y)) x += PARTNER_DX;
+  return [x, y];
+}
+
 /** To the right of the person's rightmost sibling (or of the person, if no parents). */
 export function placeSibling(doc: GenoDocument, personId: string): [number, number] {
   const person = doc.people.get(personId);
