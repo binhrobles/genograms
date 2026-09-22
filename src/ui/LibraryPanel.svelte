@@ -4,7 +4,8 @@
   import { vnodeToString } from "../export/svg";
   import { dispatchEdits, editorText } from "./editor";
   import { appendToArray, setField } from "../core/surgeon";
-  import type { VNode } from "../core/vnode";
+  import { h, type VNode } from "../core/vnode";
+  import { zigzagPath } from "../core/geom";
   import type { Person, Sex } from "../core/model";
 
   const svgWrap = (vnodes: VNode[], viewBox: string) => `<svg viewBox="${viewBox}" width="40" height="40">${vnodes.map(vnodeToString).join("")}</svg>`;
@@ -28,6 +29,58 @@
     svgWrap(emotionalLines.get(name)!.render({ x: -20, y: -6, w: 12, h: 12 }, { x: 8, y: -6, w: 12, h: 12 }), "-22 -14 44 28");
 
   const selectedEl = $derived(app.selection.length === 1 ? (app.scene?.elements.find((e) => e.id === app.selection[0]) ?? null) : null);
+
+  // color reference: field, which element kind it applies to, an example value, a swatch
+  const STYLE_FIELDS = [
+    {
+      name: "person color",
+      kind: "person",
+      field: "color",
+      example: "#7a5195",
+      hint: "shape stroke; also inks decorations + badge border",
+      swatch: svgWrap(personShapes.get("M")!.render(26, { fill: "white", stroke: "#7a5195" }), "-22 -22 44 44"),
+    },
+    {
+      name: "person fill",
+      kind: "person",
+      field: "fill",
+      example: "#f3e8fa",
+      hint: "shape interior",
+      swatch: svgWrap(personShapes.get("M")!.render(26, { fill: "#f3e8fa", stroke: "black" }), "-22 -22 44 44"),
+    },
+    {
+      name: "name badge",
+      kind: "person",
+      field: "badge",
+      example: "#e9d7f5",
+      hint: "badge background",
+      swatch: svgWrap([h("rect", { x: -16, y: -8, width: 32, height: 16, rx: 8, fill: "#e9d7f5", stroke: "#7a5195", "stroke-width": 1 })], "-22 -14 44 28"),
+    },
+    {
+      name: "union color",
+      kind: "union",
+      field: "color",
+      example: "#7a5195",
+      hint: "line, slashes, and year label",
+      swatch: svgWrap([h("line", { x1: -18, y1: 0, x2: 18, y2: 0, stroke: "#7a5195", "stroke-width": 1.5 })], "-22 -14 44 28"),
+    },
+    {
+      name: "emotion color",
+      kind: "emotional",
+      field: "color",
+      example: "#e07b39",
+      hint: "overrides the kind's default color",
+      swatch: svgWrap([h("path", { d: zigzagPath({ x: -18, y: 0 }, { x: 18, y: 0 }, 4, 9), fill: "none", stroke: "#e07b39", "stroke-width": 1.5 })], "-22 -14 44 28"),
+    },
+    {
+      name: "note color",
+      kind: "annotation",
+      field: "color",
+      example: "#888",
+      hint: "annotation text color",
+      swatch: svgWrap([h("text", { x: 0, y: 5, "text-anchor": "middle", "font-size": 14, fill: "#888" }, ["Aa"])], "-22 -14 44 28"),
+    },
+  ];
 
   const sections = $derived([
     {
@@ -70,6 +123,20 @@
         apply: () => dispatchEdits(setField(editorText(), app.map!, selectedEl!.id, "kind", n)),
       })),
     },
+    {
+      title: "Colors & styling",
+      entries: STYLE_FIELDS.map((f) => ({
+        name: f.name,
+        swatch: f.swatch,
+        snippet: `${f.field} = "${f.example}"`,
+        hint: f.hint,
+        canApply: selectedEl?.kind === f.kind,
+        apply: () => {
+          const v = prompt(`${f.name} (any CSS color):`, f.example)?.trim();
+          if (v) dispatchEdits(setField(editorText(), app.map!, selectedEl!.id, f.field, v));
+        },
+      })),
+    },
   ]);
 
   const copy = (snippet: string) => navigator.clipboard?.writeText(snippet);
@@ -89,6 +156,7 @@
         <span class="name">
           {entry.name}
           <code>{entry.snippet}</code>
+          {#if "hint" in entry && entry.hint}<small>{entry.hint}</small>{/if}
         </span>
         <span class="btns">
           <button title="copy TOML snippet" onclick={() => copy(entry.snippet)}>copy</button>
@@ -147,6 +215,10 @@
   code {
     font-size: 10px;
     color: #888;
+  }
+  small {
+    font-size: 10px;
+    color: #aaa;
   }
   .btns {
     display: flex;
