@@ -63,10 +63,11 @@ function arrowLegs(a: Point, b: Point, attrs: Record<string, string | number>): 
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len;
   const uy = dy / len;
+  const LEG = 24;
   const leg = (sign: number): Point => {
     const cos = Math.cos(0.45);
     const sin = Math.sin(0.45) * sign;
-    return { x: b.x + 12 * (-ux * cos - -uy * sin), y: b.y + 12 * (-ux * sin + -uy * cos) };
+    return { x: b.x + LEG * (-ux * cos - -uy * sin), y: b.y + LEG * (-ux * sin + -uy * cos) };
   };
   return [seg(b, leg(1), attrs), seg(b, leg(-1), attrs)];
 }
@@ -96,7 +97,7 @@ const harmony: EmotionalLineStyle = {
 const fixation: EmotionalLineStyle = {
   render: (f, t) => {
     const [a, b] = endpoints(f, t);
-    return [seg(a, b, PURPLE), h("circle", { cx: b.x, cy: b.y, r: 4, fill: PURPLE.stroke, stroke: "none" })];
+    return [seg(a, b, PURPLE), h("circle", { cx: b.x, cy: b.y, r: 8, fill: PURPLE.stroke, stroke: "none" })];
   },
 };
 
