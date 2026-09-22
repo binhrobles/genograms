@@ -20,6 +20,7 @@ function parallelLines(from: Box, to: Box, offsets: number[], attrs: Record<stri
 const GREEN = { stroke: "#2e8b57" };
 const RED = { stroke: "#c0392b" };
 const GRAY = { stroke: "#888" };
+const BLUE = { stroke: "#2a7ab8" };
 
 const close: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-2, 2], GREEN) };
 const fused: EmotionalLineStyle = { render: (f, t) => parallelLines(f, t, [-4, 0, 4], GREEN) };
@@ -55,7 +56,26 @@ const cutoff: EmotionalLineStyle = {
   },
 };
 
+/** Directional: between[0] is the caretaker, the arrow points at the person cared for. */
+const caretaker: EmotionalLineStyle = {
+  render: (f, t) => {
+    const [a, b] = endpoints(f, t);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const leg = (sign: number): Point => {
+      const cos = Math.cos(0.45);
+      const sin = Math.sin(0.45) * sign;
+      return { x: b.x + 12 * (-ux * cos - -uy * sin), y: b.y + 12 * (-ux * sin + -uy * cos) };
+    };
+    return [seg(a, b, BLUE), seg(b, leg(1), BLUE), seg(b, leg(-1), BLUE)];
+  },
+};
+
 emotionalLines.register("close", close);
+emotionalLines.register("caretaker", caretaker);
 emotionalLines.register("fused", fused);
 emotionalLines.register("conflict", conflict);
 emotionalLines.register("fused-conflict", fusedConflict);

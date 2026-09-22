@@ -48,6 +48,7 @@ color = "#7a5195"      # optional: line color
 [emotional.ada-mom]
 between = ["ada", "mom"]
 kind = "close"         # close | fused | conflict | fused-conflict | cutoff | distant
+                       # | caretaker (directional: between[0] cares FOR between[1])
 color = "#e07b39"      # optional: overrides the kind's default color
 
 [annotations.n1]

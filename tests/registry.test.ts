@@ -83,8 +83,16 @@ describe("line styles", () => {
     expect(unionLines.get("separated")!.renderAdornment!({ x: 80, y: 50 })).toHaveLength(1);
     expect(unionLines.get("divorced")!.renderAdornment!({ x: 80, y: 50 })).toHaveLength(2);
   });
-  it("registers the six emotional kinds", () => {
-    expect(emotionalLines.names().sort()).toEqual(["close", "conflict", "cutoff", "distant", "fused", "fused-conflict"]);
+  it("registers the seven emotional kinds", () => {
+    expect(emotionalLines.names().sort()).toEqual(["caretaker", "close", "conflict", "cutoff", "distant", "fused", "fused-conflict"]);
+  });
+  it("caretaker draws a line plus a 2-leg arrowhead at the recipient end", () => {
+    const vs = emotionalLines.get("caretaker")!.render(boxA, boxB);
+    expect(vs).toHaveLength(3);
+    // both arrow legs anchor at the `to` endpoint
+    const [, leg1, leg2] = vs;
+    expect(leg1.attrs.x1).toBe(leg2.attrs.x1);
+    expect(leg1.attrs.y1).toBe(leg2.attrs.y1);
   });
   it("close = 2 lines, fused = 3, cutoff = line + 2 bars, conflict zigzags, distant dashes", () => {
     expect(emotionalLines.get("close")!.render(boxA, boxB)).toHaveLength(2);
