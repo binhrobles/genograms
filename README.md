@@ -39,6 +39,10 @@ partners = ["mom", "dad"]
 status = "divorced"    # married | divorced | separated | cohabiting | dating
 year = 1988
 color = "#7a5195"      # optional: line color
+# The union line connects partners side-to-side (elbowing if they sit at
+# different heights); children hang from it. "Married but cut off" is a
+# union PLUS an emotional link between the same pair — the emotional line
+# automatically renders offset below the union line.
 
 [emotional.ada-mom]
 between = ["ada", "mom"]

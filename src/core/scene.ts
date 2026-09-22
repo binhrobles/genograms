@@ -28,15 +28,29 @@ export function personPos(doc: GenoDocument, id: string): Point {
   return { x, y };
 }
 
-export function unionGeometry(doc: GenoDocument, unionId: string): { a: Point; b: Point; busY: number; midX: number } | null {
+export interface UnionGeometry {
+  a: Point;
+  b: Point;
+  l: Point; // leftmost partner
+  r: Point; // rightmost partner
+  sameRow: boolean;
+  busY: number; // y where child links attach
+  midX: number;
+}
+
+/** Union lines connect partners side-to-side on the horizontal plane; when the two sit at
+ *  different heights the line elbows through the vertical at midX. Children attach at
+ *  (midX-ish, busY) — the horizontal itself when level, the bottom of the elbow otherwise. */
+export function unionGeometry(doc: GenoDocument, unionId: string): UnionGeometry | null {
   const u = doc.unions.get(unionId);
   if (!u || u.partners.length !== 2) return null;
   const [pa, pb] = u.partners;
   if (!doc.people.has(pa) || !doc.people.has(pb)) return null;
   const a = personPos(doc, pa);
   const b = personPos(doc, pb);
-  const busY = Math.max(a.y, b.y) + PERSON_SIZE / 2 + BUS_DROP;
-  return { a, b, busY, midX: (a.x + b.x) / 2 };
+  const [l, r] = a.x <= b.x ? [a, b] : [b, a];
+  const sameRow = Math.abs(a.y - b.y) < 1;
+  return { a, b, l, r, sameRow, busY: sameRow ? a.y : Math.max(a.y, b.y), midX: (a.x + b.x) / 2 };
 }
 
 const label = (x: number, y: number, text: string, anchor = "middle", fill = "black"): VNode =>
@@ -140,21 +154,30 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       warn(`unknown union status \`${u.status}\` on \`${u.id}\``);
       style = unionLines.get("married")!;
     }
-    const path: Point[] = [
-      { x: g.a.x, y: g.a.y + s / 2 },
-      { x: g.a.x, y: g.busY },
-      { x: g.b.x, y: g.busY },
-      { x: g.b.x, y: g.b.y + s / 2 },
-    ];
-    let vnodes = [...style.renderLine(path), ...(style.renderAdornment?.({ x: g.midX, y: g.busY }) ?? [])];
+    const half = s / 2;
+    const path: Point[] = g.sameRow
+      ? [
+          { x: g.l.x + half, y: g.l.y },
+          { x: g.r.x - half, y: g.r.y },
+        ]
+      : [
+          { x: g.l.x + half, y: g.l.y },
+          { x: g.midX, y: g.l.y },
+          { x: g.midX, y: g.r.y },
+          { x: g.r.x - half, y: g.r.y },
+        ];
+    const mid: Point = g.sameRow ? { x: g.midX, y: g.busY } : { x: g.midX, y: (g.l.y + g.r.y) / 2 };
+    let vnodes = [...style.renderLine(path), ...(style.renderAdornment?.(mid) ?? [])];
     if (u.color) vnodes = recolor(vnodes, u.color);
-    if (u.year != null) vnodes.push(haloLabel(g.midX, g.busY + 16, `${STATUS_PREFIX[u.status] ?? ""} ${u.year}`.trim(), u.color ?? "#444"));
+    if (u.year != null) vnodes.push(haloLabel(mid.x, mid.y - 8, `${STATUS_PREFIX[u.status] ?? ""} ${u.year}`.trim(), u.color ?? "#444"));
     lines.push({
       id: u.id,
       kind: "union",
       selectable: true,
       draggable: false,
-      bounds: { x: Math.min(g.a.x, g.b.x), y: g.busY - 8, w: Math.abs(g.b.x - g.a.x) || 20, h: 16 },
+      bounds: g.sameRow
+        ? { x: g.l.x + half, y: g.busY - 8, w: Math.max(12, g.r.x - g.l.x - s), h: 16 }
+        : { x: g.midX - 8, y: Math.min(g.l.y, g.r.y), w: 16, h: Math.max(12, Math.abs(g.r.y - g.l.y)) },
       vnodes,
     });
   }
@@ -166,9 +189,9 @@ export function buildScene(doc: GenoDocument): SceneGraph {
     let path: Point[] | null = null;
     const g = doc.unions.has(p.parents) ? unionGeometry(doc, p.parents) : null;
     if (g) {
-      const lo = Math.min(g.a.x, g.b.x) + 10;
-      const hi = Math.max(g.a.x, g.b.x) - 10;
-      if (child.x >= lo && child.x <= hi) {
+      const lo = g.l.x + s / 2 + 6;
+      const hi = g.r.x - s / 2 - 6;
+      if (g.sameRow && child.x >= lo && child.x <= hi) {
         path = [
           { x: child.x, y: g.busY },
           { x: child.x, y: childTop },
@@ -212,8 +235,12 @@ export function buildScene(doc: GenoDocument): SceneGraph {
       warn(`unknown emotional kind \`${e.kind}\` on \`${e.id}\``);
       style = emotionalLines.get("close")!;
     }
-    const ba = absBox(e.between[0]);
-    const bb = absBox(e.between[1]);
+    // a pair that also shares a union (e.g. married AND cut off) gets its emotional
+    // line offset below the union line so both stay readable
+    const partnered = [...doc.unions.values()].some((u) => u.partners.includes(e.between[0]) && u.partners.includes(e.between[1]));
+    const off = partnered ? s * 0.85 : 0;
+    const ba = { ...absBox(e.between[0]), y: absBox(e.between[0]).y + off };
+    const bb = { ...absBox(e.between[1]), y: absBox(e.between[1]).y + off };
     let vs = style.render(ba, bb);
     if (e.color) vs = recolor(vs, e.color);
     emos.push({

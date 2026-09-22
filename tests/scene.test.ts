@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseGenogram } from "../src/core/parse";
-import { buildScene, unionGeometry, PERSON_SIZE, BUS_DROP } from "../src/core/scene";
+import { buildScene, unionGeometry, PERSON_SIZE } from "../src/core/scene";
 import { FAMILY } from "./fixtures";
 import "../src/core/registry/builtins";
 
@@ -29,11 +29,27 @@ describe("buildScene", () => {
     expect(mai.layoutPos).toEqual([160, 0]);
   });
 
-  it("computes union bus geometry", () => {
+  it("computes union geometry: horizontal connector between level partners", () => {
     const doc = parseGenogram(FAMILY).doc!;
     const g = unionGeometry(doc, "binh-mai")!;
-    expect(g.busY).toBe(PERSON_SIZE / 2 + BUS_DROP);
+    expect(g.sameRow).toBe(true);
+    expect(g.busY).toBe(0); // children attach on the horizontal itself
     expect(g.midX).toBe(80);
+    const u = buildScene(doc).elements.find((e) => e.id === "binh-mai")!;
+    // the line runs side-to-side: from binh's right edge to mai's left edge
+    expect(JSON.stringify(u.vnodes)).toContain(`"points":"20,0 140,0"`);
+  });
+
+  it("elbows the union line when partners sit at different heights", () => {
+    const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]\n[layout]\na = [0, 0]\nb = [200, 60]`;
+    const u = scene(t).elements.find((e) => e.id === "u")!;
+    expect(JSON.stringify(u.vnodes)).toContain(`"points":"20,0 100,0 100,60 180,60"`);
+  });
+
+  it("offsets an emotional line below the union line for partnered pairs", () => {
+    const t = `[people.a]\n[people.b]\n[unions.u]\npartners = ["a","b"]\n[emotional.e]\nbetween = ["a","b"]\nkind = "cutoff"\n[layout]\na = [0,0]\nb = [200,0]`;
+    const e = scene(t).elements.find((el) => el.id === "e")!;
+    expect(e.hitLine![0].y).toBeGreaterThan(20); // below the shapes, not through their centers
   });
 
   it("renders deceased X when death is set", () => {

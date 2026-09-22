@@ -3,7 +3,7 @@ import { personPos, unionGeometry, PERSON_SIZE, BUS_DROP } from "./scene";
 
 export const PARTNER_DX = 160;
 export const SIBLING_DX = 90;
-export const CHILD_DY = 90;
+export const CHILD_DY = 120;
 
 function occupied(doc: GenoDocument, x: number, y: number): boolean {
   for (const id of doc.people.keys()) {
